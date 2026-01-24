@@ -1,0 +1,35 @@
+﻿  Determining projects to restore...
+D:\New Projects\pos c#\src\POSSystem\POSSystem.csproj : warning NU1603: POSSystem depends on Velopack (>= 0.0.1086) but Velopack 0.0.1086 was not found. Velopack 0.0.1251 was resolved instead.
+  All projects are up-to-date for restore.
+D:\New Projects\pos c#\src\POSSystem\POSSystem.csproj : warning NU1603: POSSystem depends on Velopack (>= 0.0.1086) but Velopack 0.0.1086 was not found. Velopack 0.0.1251 was resolved instead.
+D:\New Projects\pos c#\src\POSSystem\POSSystem_5jey0c5k_wpftmp.csproj : warning NU1603: POSSystem depends on Velopack (>= 0.0.1086) but Velopack 0.0.1086 was not found. Velopack 0.0.1251 was resolved instead.
+D:\New Projects\pos c#\src\POSSystem\App.xaml.cs(29,24): error CS0017: Program has more than one entry point defined. Compile with /main to specify the type that contains the entry point. [D:\New Projects\pos c#\src\POSSystem\POSSystem_5jey0c5k_wpftmp.csproj]
+D:\New Projects\pos c#\src\POSSystem\App.xaml.cs(33,14): error CS1061: 'VelopackApp' does not contain a definition for 'WithFirstRun' and no accessible extension method 'WithFirstRun' accepting a first argument of type 'VelopackApp' could be found (are you missing a using directive or an assembly reference?) [D:\New Projects\pos c#\src\POSSystem\POSSystem_5jey0c5k_wpftmp.csproj]
+D:\New Projects\pos c#\src\POSSystem\Services\UpdateService.cs(46,32): error CS0117: 'VelopackApp' does not contain a definition for 'GetCurrentVersion' [D:\New Projects\pos c#\src\POSSystem\POSSystem_5jey0c5k_wpftmp.csproj]
+D:\New Projects\pos c#\src\POSSystem\ViewModels\LoginViewModel.cs(87,73): error CS1593: Delegate 'Func<object?, bool>' does not take 0 arguments [D:\New Projects\pos c#\src\POSSystem\POSSystem_5jey0c5k_wpftmp.csproj]
+D:\New Projects\pos c#\src\POSSystem\Services\LicenseService.cs(188,28): error CS0103: The name 'Path' does not exist in the current context [D:\New Projects\pos c#\src\POSSystem\POSSystem_5jey0c5k_wpftmp.csproj]
+D:\New Projects\pos c#\src\POSSystem\Services\LicenseService.cs(195,17): error CS0103: The name 'File' does not exist in the current context [D:\New Projects\pos c#\src\POSSystem\POSSystem_5jey0c5k_wpftmp.csproj]
+D:\New Projects\pos c#\src\POSSystem\Services\LicenseService.cs(196,24): error CS0103: The name 'File' does not exist in the current context [D:\New Projects\pos c#\src\POSSystem\POSSystem_5jey0c5k_wpftmp.csproj]
+D:\New Projects\pos c#\src\POSSystem\Services\LicenseService.cs(199,13): error CS0103: The name 'Directory' does not exist in the current context [D:\New Projects\pos c#\src\POSSystem\POSSystem_5jey0c5k_wpftmp.csproj]
+D:\New Projects\pos c#\src\POSSystem\Services\LicenseService.cs(199,39): error CS0103: The name 'Path' does not exist in the current context [D:\New Projects\pos c#\src\POSSystem\POSSystem_5jey0c5k_wpftmp.csproj]
+D:\New Projects\pos c#\src\POSSystem\Services\LicenseService.cs(200,13): error CS0103: The name 'File' does not exist in the current context [D:\New Projects\pos c#\src\POSSystem\POSSystem_5jey0c5k_wpftmp.csproj]
+
+Build FAILED.
+
+D:\New Projects\pos c#\src\POSSystem\POSSystem.csproj : warning NU1603: POSSystem depends on Velopack (>= 0.0.1086) but Velopack 0.0.1086 was not found. Velopack 0.0.1251 was resolved instead.
+D:\New Projects\pos c#\src\POSSystem\POSSystem.csproj : warning NU1603: POSSystem depends on Velopack (>= 0.0.1086) but Velopack 0.0.1086 was not found. Velopack 0.0.1251 was resolved instead.
+D:\New Projects\pos c#\src\POSSystem\POSSystem_5jey0c5k_wpftmp.csproj : warning NU1603: POSSystem depends on Velopack (>= 0.0.1086) but Velopack 0.0.1086 was not found. Velopack 0.0.1251 was resolved instead.
+D:\New Projects\pos c#\src\POSSystem\App.xaml.cs(29,24): error CS0017: Program has more than one entry point defined. Compile with /main to specify the type that contains the entry point. [D:\New Projects\pos c#\src\POSSystem\POSSystem_5jey0c5k_wpftmp.csproj]
+D:\New Projects\pos c#\src\POSSystem\App.xaml.cs(33,14): error CS1061: 'VelopackApp' does not contain a definition for 'WithFirstRun' and no accessible extension method 'WithFirstRun' accepting a first argument of type 'VelopackApp' could be found (are you missing a using directive or an assembly reference?) [D:\New Projects\pos c#\src\POSSystem\POSSystem_5jey0c5k_wpftmp.csproj]
+D:\New Projects\pos c#\src\POSSystem\Services\UpdateService.cs(46,32): error CS0117: 'VelopackApp' does not contain a definition for 'GetCurrentVersion' [D:\New Projects\pos c#\src\POSSystem\POSSystem_5jey0c5k_wpftmp.csproj]
+D:\New Projects\pos c#\src\POSSystem\ViewModels\LoginViewModel.cs(87,73): error CS1593: Delegate 'Func<object?, bool>' does not take 0 arguments [D:\New Projects\pos c#\src\POSSystem\POSSystem_5jey0c5k_wpftmp.csproj]
+D:\New Projects\pos c#\src\POSSystem\Services\LicenseService.cs(188,28): error CS0103: The name 'Path' does not exist in the current context [D:\New Projects\pos c#\src\POSSystem\POSSystem_5jey0c5k_wpftmp.csproj]
+D:\New Projects\pos c#\src\POSSystem\Services\LicenseService.cs(195,17): error CS0103: The name 'File' does not exist in the current context [D:\New Projects\pos c#\src\POSSystem\POSSystem_5jey0c5k_wpftmp.csproj]
+D:\New Projects\pos c#\src\POSSystem\Services\LicenseService.cs(196,24): error CS0103: The name 'File' does not exist in the current context [D:\New Projects\pos c#\src\POSSystem\POSSystem_5jey0c5k_wpftmp.csproj]
+D:\New Projects\pos c#\src\POSSystem\Services\LicenseService.cs(199,13): error CS0103: The name 'Directory' does not exist in the current context [D:\New Projects\pos c#\src\POSSystem\POSSystem_5jey0c5k_wpftmp.csproj]
+D:\New Projects\pos c#\src\POSSystem\Services\LicenseService.cs(199,39): error CS0103: The name 'Path' does not exist in the current context [D:\New Projects\pos c#\src\POSSystem\POSSystem_5jey0c5k_wpftmp.csproj]
+D:\New Projects\pos c#\src\POSSystem\Services\LicenseService.cs(200,13): error CS0103: The name 'File' does not exist in the current context [D:\New Projects\pos c#\src\POSSystem\POSSystem_5jey0c5k_wpftmp.csproj]
+    3 Warning(s)
+    10 Error(s)
+
+Time Elapsed 00:00:01.34
