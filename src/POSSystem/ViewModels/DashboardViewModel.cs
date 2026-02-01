@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using POSSystem.Data;
 using POSSystem.Data.Interfaces;
@@ -595,12 +596,68 @@ public partial class DashboardViewModel : ObservableObject
             System.Windows.MessageBoxButton.YesNo,
             System.Windows.MessageBoxImage.Warning);
         
-        if (result == System.Windows.MessageBoxResult.Yes)
+        if (result != System.Windows.MessageBoxResult.Yes) return;
+        
+        Debug.WriteLine("[DevMode] Clearing test data...");
+        
+        try
         {
-            Debug.WriteLine("[DevMode] Clearing test data...");
-            // TODO: Implement data reset
+            // Get database context
+            using var scope = App.Current.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            
+            // Get counts before clearing for notification
+            var transactionCount = await db.Transactions.CountAsync();
+            var totalSales = transactionCount > 0 
+                ? await db.Transactions.SumAsync(t => t.Total) 
+                : 0m;
+            
+            // Clear data using raw SQL for efficiency
+            await db.Database.ExecuteSqlRawAsync("DELETE FROM TransactionItems");
+            await db.Database.ExecuteSqlRawAsync("DELETE FROM Transactions");
+            await db.Database.ExecuteSqlRawAsync("DELETE FROM SyncRecords WHERE EntityType = 'Transaction'");
+            
+            Debug.WriteLine($"[DevMode] Cleared {transactionCount} transactions, total: {totalSales:C2}");
+            
+            // Send admin notification
+            var emailService = App.Current.Services.GetService<IEmailService>();
+            if (emailService != null && transactionCount > 0)
+            {
+                await emailService.SendTransactionClearNotificationAsync(
+                    "Developer Mode",
+                    transactionCount,
+                    totalSales);
+            }
+            
+            // Refresh UI
             await RefreshDataAsync();
-            Debug.WriteLine("[DevMode] Test data cleared");
+            
+            // Show success message
+            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                System.Windows.MessageBox.Show(
+                    $"✅ Test data cleared successfully!\n\n" +
+                    $"Transactions deleted: {transactionCount}\n" +
+                    $"Total sales cleared: {totalSales:C2}",
+                    "Clear Complete",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Information);
+            });
+            
+            Debug.WriteLine("[DevMode] Test data cleared successfully");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[DevMode] Error clearing test data: {ex.Message}");
+            
+            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                System.Windows.MessageBox.Show(
+                    $"Error clearing test data:\n{ex.Message}",
+                    "Error",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Error);
+            });
         }
     }
 

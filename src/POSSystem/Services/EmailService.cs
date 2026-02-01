@@ -5,13 +5,14 @@ using System.Net;
 using System.Net.Mail;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
+using POSSystem.Services.Interfaces;
 
 namespace POSSystem.Services;
 
 /// <summary>
 /// Service for sending email notifications to admin.
 /// </summary>
-public class EmailService
+public class EmailService : IEmailService
 {
     private readonly IConfiguration _configuration;
     private readonly string _logPath;
@@ -142,6 +143,58 @@ Subject: {subject}
         catch (Exception ex)
         {
             Debug.WriteLine($"[Email] Failed to log: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Sends a generic admin notification email.
+    /// </summary>
+    public async Task<bool> SendAdminNotificationAsync(string subject, string body)
+    {
+        try
+        {
+            var adminEmail = _configuration["Admin:Email"] ?? "abdulrahman.mohamed1808@gmail.com";
+            var smtpHost = _configuration["Smtp:Host"] ?? "smtp.gmail.com";
+            var smtpPort = int.Parse(_configuration["Smtp:Port"] ?? "587");
+            var smtpUser = _configuration["Smtp:Username"] ?? "";
+            var smtpPass = _configuration["Smtp:Password"] ?? "";
+            var fromEmail = _configuration["Smtp:FromEmail"] ?? "noreply@possystem.local";
+            var fromName = _configuration["Smtp:FromName"] ?? "POS System";
+
+            // Check if SMTP credentials are configured
+            if (string.IsNullOrEmpty(smtpUser) || string.IsNullOrEmpty(smtpPass))
+            {
+                await LogEmailToFileAsync(subject, body, adminEmail);
+                Debug.WriteLine("[Email] SMTP not configured - logged to file instead");
+                return true;
+            }
+
+            using var client = new SmtpClient(smtpHost, smtpPort)
+            {
+                EnableSsl = true,
+                Credentials = new NetworkCredential(smtpUser, smtpPass),
+                Timeout = 10000
+            };
+
+            using var message = new MailMessage
+            {
+                From = new MailAddress(fromEmail, fromName),
+                Subject = subject,
+                Body = body,
+                IsBodyHtml = true
+            };
+            message.To.Add(adminEmail);
+
+            await client.SendMailAsync(message);
+            Debug.WriteLine($"[Email] Admin notification sent to {adminEmail}");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Email] Failed to send admin notification: {ex.Message}");
+            await LogEmailToFileAsync("FAILED: " + subject, $"Error: {ex.Message}\n\n{body}", 
+                _configuration["Admin:Email"] ?? "unknown");
+            return false;
         }
     }
 }

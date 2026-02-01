@@ -193,6 +193,9 @@ public partial class App : Application
         
         // System Health Service (diagnostics for dev overlay)
         services.AddSingleton<ISystemHealthService, SystemHealthService>();
+        
+        // Email Service (admin notifications)
+        services.AddSingleton<IEmailService, EmailService>();
 
 
         // ViewModels
