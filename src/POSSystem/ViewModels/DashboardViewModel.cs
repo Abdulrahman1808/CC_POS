@@ -637,13 +637,13 @@ public partial class DashboardViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Clears all test data (transactions and products).
+    /// Clears all test data (transactions and sync records).
     /// </summary>
     [RelayCommand]
     private async Task ClearTestDataAsync()
     {
         var result = System.Windows.MessageBox.Show(
-            "This will delete ALL transactions and reset to seed data.\n\nAre you sure?",
+            "This will delete ALL transactions and sync records.\n\nAre you sure?",
             "Clear Test Data",
             System.Windows.MessageBoxButton.YesNo,
             System.Windows.MessageBoxImage.Warning);
@@ -652,56 +652,77 @@ public partial class DashboardViewModel : ObservableObject
         
         Debug.WriteLine("[DevMode] Clearing test data...");
         
+        IsProcessing = true;
         try
         {
-            // Get database context
-            using var scope = App.Current.Services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            
             // Get counts before clearing for notification
-            var transactionCount = await db.Transactions.CountAsync();
-            var totalSales = transactionCount > 0 
-                ? await db.Transactions.SumAsync(t => t.Total) 
-                : 0m;
+            int transactionCount = 0;
+            decimal totalSales = 0;
             
-            // Clear data using raw SQL for efficiency
-            await db.Database.ExecuteSqlRawAsync("DELETE FROM TransactionItems");
-            await db.Database.ExecuteSqlRawAsync("DELETE FROM Transactions");
-            await db.Database.ExecuteSqlRawAsync("DELETE FROM SyncRecords WHERE EntityType = 'Transaction'");
-            
-            Debug.WriteLine($"[DevMode] Cleared {transactionCount} transactions, total: {totalSales:C2}");
-            
-            // Send admin notification
-            var emailService = App.Current.Services.GetService<IEmailService>();
-            if (emailService != null && transactionCount > 0)
+            try 
             {
-                await emailService.SendTransactionClearNotificationAsync(
-                    "Developer Mode",
-                    transactionCount,
-                    totalSales);
+                using var scope = App.Current.Services.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                transactionCount = await db.Transactions.CountAsync();
+                totalSales = transactionCount > 0 
+                    ? await db.Transactions.SumAsync(t => t.Total) 
+                    : 0m;
             }
-            
-            // Refresh UI
-            await RefreshDataAsync();
-            
-            // Show success message
-            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DevMode] Error getting stats: {ex.Message}");
+            }
+
+            var success = await _dataService.ClearAllDataAsync();
+            if (success)
+            {
+                // Update local state
+                DailySales = 0;
+                TransactionCount = 0;
+                PendingSyncCount = 0;
+                
+                await RefreshDataAsync();
+                
+                // Send admin notification
+                try 
+                {
+                    var emailService = App.Current.Services.GetService<IEmailService>();
+                    if (emailService != null && transactionCount > 0)
+                    {
+                        await emailService.SendTransactionClearNotificationAsync(
+                            "Developer Mode",
+                            transactionCount,
+                            totalSales);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[DevMode] Email notification failed: {ex.Message}");
+                }
+
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    System.Windows.MessageBox.Show(
+                        $"✅ Test data cleared successfully!\n\n" +
+                        $"Transactions deleted: {transactionCount}\n" +
+                        $"Total sales cleared: {totalSales:C2}",
+                        "Clear Complete",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Information);
+                });
+            }
+            else
             {
                 System.Windows.MessageBox.Show(
-                    $"✅ Test data cleared successfully!\n\n" +
-                    $"Transactions deleted: {transactionCount}\n" +
-                    $"Total sales cleared: {totalSales:C2}",
-                    "Clear Complete",
+                    "Failed to clear data. Check logs for details.",
+                    "Error",
                     System.Windows.MessageBoxButton.OK,
-                    System.Windows.MessageBoxImage.Information);
-            });
-            
-            Debug.WriteLine("[DevMode] Test data cleared successfully");
+                    System.Windows.MessageBoxImage.Error);
+            }
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"[DevMode] Error clearing test data: {ex.Message}");
-            
             await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 System.Windows.MessageBox.Show(
@@ -710,6 +731,10 @@ public partial class DashboardViewModel : ObservableObject
                     System.Windows.MessageBoxButton.OK,
                     System.Windows.MessageBoxImage.Error);
             });
+        }
+        finally
+        {
+            IsProcessing = false;
         }
     }
 

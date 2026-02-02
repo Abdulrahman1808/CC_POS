@@ -15,6 +15,8 @@ import {
   initializeSuperAdmin,
 } from "./utils/supabase/client";
 
+import { I18nProvider } from "./utils/I18nContext";
+
 // IMPORTANT: Set your super admin email here
 // Replace 'your-email@example.com' with your actual email address
 // The first account created with this email will be the Super Admin
@@ -51,7 +53,7 @@ export default function App() {
       }
       // Store current email for future checks
       localStorage.setItem("superadmin_email", SUPER_ADMIN_EMAIL);
-      
+
       // Check if we already know the super admin exists
       const superAdminExists = localStorage.getItem("superadmin_exists");
       const needsConfirmation = localStorage.getItem("superadmin_needs_confirmation");
@@ -80,7 +82,7 @@ export default function App() {
         console.warn("");
         console.warn("See SETUP_INSTRUCTIONS.md for detailed help.");
         console.warn("=".repeat(80) + "\n");
-        
+
         setInitError(
           "Email not confirmed. Please disable email confirmation in Supabase and manually confirm the user."
         );
@@ -114,10 +116,10 @@ export default function App() {
           console.error("");
           console.error("See SETUP_INSTRUCTIONS.md for detailed help.");
           console.error("=".repeat(80) + "\n");
-          
+
           setInitError(
             result.error ||
-              "Email not confirmed. Please disable email confirmation in Supabase and manually confirm the user."
+            "Email not confirmed. Please disable email confirmation in Supabase and manually confirm the user."
           );
         } else if (result.rateLimited) {
           console.warn(
@@ -303,36 +305,40 @@ export default function App() {
 
   if (!isAuthenticated) {
     return (
-      <LoginPage
-        onLogin={handleLogin}
-        onSignup={handleSignup}
-        error={authError}
-        loading={authLoading}
-      />
+      <I18nProvider>
+        <LoginPage
+          onLogin={handleLogin}
+          onSignup={handleSignup}
+          error={authError}
+          loading={authLoading}
+        />
+      </I18nProvider>
     );
   }
 
   return (
-    <div className="dark min-h-screen bg-background flex">
-      <Sidebar
-        activePage={activePage}
-        onNavigate={setActivePage}
-      />
-
-      <div className="flex-1 flex flex-col min-h-screen">
-        <Header
-          onLogout={handleLogout}
-          userName={user?.fullName || "Admin"}
-          userRole={user?.role || "admin"}
+    <I18nProvider>
+      <div className="dark min-h-screen bg-background flex">
+        <Sidebar
+          activePage={activePage}
+          onNavigate={setActivePage}
         />
 
-        <main className="flex-1 p-6 overflow-y-auto">
-          {activePage === "dashboard" && <Dashboard />}
-          {activePage === "tenants" && <TenantManagement />}
-          {activePage === "analytics" && <Analytics />}
-          {activePage === "settings" && <Settings />}
-        </main>
+        <div className="flex-1 flex flex-col min-h-screen">
+          <Header
+            onLogout={handleLogout}
+            userName={user?.fullName || "Admin"}
+            userRole={user?.role || "admin"}
+          />
+
+          <main className="flex-1 p-6 overflow-y-auto">
+            {activePage === "dashboard" && <Dashboard />}
+            {activePage === "tenants" && <TenantManagement />}
+            {activePage === "analytics" && <Analytics />}
+            {activePage === "settings" && <Settings />}
+          </main>
+        </div>
       </div>
-    </div>
+    </I18nProvider>
   );
 }

@@ -123,6 +123,55 @@ public class EmailService : IEmailService
         }
     }
 
+    /// <summary>
+    /// Sends a generic notification email to the system administrator.
+    /// </summary>
+    public async Task<bool> SendAdminNotificationAsync(string subject, string body)
+    {
+        try
+        {
+            var adminEmail = _configuration["Admin:Email"] ?? "abdulrahman.mohamed1808@gmail.com";
+            var smtpHost = _configuration["Smtp:Host"] ?? "smtp.gmail.com";
+            var smtpPort = int.Parse(_configuration["Smtp:Port"] ?? "587");
+            var smtpUser = _configuration["Smtp:Username"] ?? "";
+            var smtpPass = _configuration["Smtp:Password"] ?? "";
+            var fromEmail = _configuration["Smtp:FromEmail"] ?? "noreply@possystem.local";
+            var fromName = _configuration["Smtp:FromName"] ?? "POS System";
+
+            // If SMTP not configured, log to file
+            if (string.IsNullOrEmpty(smtpUser) || string.IsNullOrEmpty(smtpPass))
+            {
+                await LogEmailToFileAsync(subject, body, adminEmail);
+                return true;
+            }
+
+            using var client = new SmtpClient(smtpHost, smtpPort)
+            {
+                EnableSsl = true,
+                Credentials = new NetworkCredential(smtpUser, smtpPass),
+                Timeout = 10000
+            };
+
+            using var message = new MailMessage
+            {
+                From = new MailAddress(fromEmail, fromName),
+                Subject = subject,
+                Body = body,
+                IsBodyHtml = true
+            };
+            message.To.Add(adminEmail);
+
+            await client.SendMailAsync(message);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Email] Failed to send notification: {ex.Message}");
+            await LogEmailToFileAsync("FAILED NOTIFICATION", $"Error: {ex.Message}\n\n{body}", "admin");
+            return false;
+        }
+    }
+
     private async Task LogEmailToFileAsync(string subject, string body, string recipient)
     {
         try

@@ -5,8 +5,10 @@ import { DataTable } from './DataTable';
 import { Tag } from './Tag';
 import { Modal } from './Modal';
 import { Input } from './Input';
+import { useI18n } from '../utils/I18nContext';
 
 export function TenantManagement() {
+  const { t } = useI18n();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -19,7 +21,7 @@ export function TenantManagement() {
     adminPassword: '',
     plan: 'basic'
   });
-  
+
   // Sample tenant data (in production, this would come from Supabase)
   const allTenants = Array.from({ length: 142 }, (_, i) => ({
     id: i + 1,
@@ -29,22 +31,22 @@ export function TenantManagement() {
     plan: ['Basic', 'Pro', 'Enterprise'][Math.floor(Math.random() * 3)],
     dateJoined: new Date(2024, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1).toLocaleDateString('en-GB')
   }));
-  
+
   // Filter tenants
   const filteredTenants = allTenants.filter(tenant => {
     const matchesSearch = tenant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         tenant.email.toLowerCase().includes(searchQuery.toLowerCase());
+      tenant.email.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || tenant.status === statusFilter;
     const matchesPlan = planFilter === 'all' || tenant.plan.toLowerCase() === planFilter.toLowerCase();
     return matchesSearch && matchesStatus && matchesPlan;
   });
-  
+
   // Pagination
   const itemsPerPage = 10;
   const totalPages = Math.ceil(filteredTenants.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedTenants = filteredTenants.slice(startIndex, startIndex + itemsPerPage);
-  
+
   const columns = [
     { key: 'name', label: 'Tenant Name' },
     { key: 'email', label: 'Admin Email' },
@@ -59,12 +61,12 @@ export function TenantManagement() {
     { key: 'plan', label: 'Subscription Plan' },
     { key: 'dateJoined', label: 'Date Joined' }
   ];
-  
+
   const handleAction = (action: string, row: any) => {
     console.log(`Action: ${action}`, row);
     // In production, handle these actions with Supabase
   };
-  
+
   const handleCreateTenant = (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Creating tenant:', newTenant);
@@ -78,7 +80,7 @@ export function TenantManagement() {
       plan: 'basic'
     });
   };
-  
+
   const generatePassword = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
     let password = '';
@@ -87,18 +89,18 @@ export function TenantManagement() {
     }
     setNewTenant({ ...newTenant, adminPassword: password });
   };
-  
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-foreground">Tenant Management</h1>
+        <h1 className="text-foreground">{t('tenants')}</h1>
         <Button onClick={() => setShowCreateModal(true)}>
           <Plus size={20} className="mr-2" />
-          Create New Tenant
+          {t('create_new_tenant')}
         </Button>
       </div>
-      
+
       {/* Filters */}
       <div className="bg-card border border-border rounded-lg p-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -106,7 +108,7 @@ export function TenantManagement() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
             <input
               type="text"
-              placeholder="Search tenants..."
+              placeholder={t('search')}
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -115,7 +117,7 @@ export function TenantManagement() {
               className="w-full bg-input border border-border rounded-lg pl-10 pr-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
-          
+
           <select
             value={statusFilter}
             onChange={(e) => {
@@ -129,7 +131,7 @@ export function TenantManagement() {
             <option value="inactive">Inactive</option>
             <option value="trial">Trial</option>
           </select>
-          
+
           <select
             value={planFilter}
             onChange={(e) => {
@@ -145,7 +147,7 @@ export function TenantManagement() {
           </select>
         </div>
       </div>
-      
+
       {/* Table */}
       <DataTable
         columns={columns}
@@ -155,7 +157,7 @@ export function TenantManagement() {
         onPageChange={setCurrentPage}
         onAction={handleAction}
       />
-      
+
       {/* Create Tenant Modal */}
       <Modal
         isOpen={showCreateModal}
@@ -170,7 +172,7 @@ export function TenantManagement() {
             onChange={(e) => setNewTenant({ ...newTenant, businessName: e.target.value })}
             required
           />
-          
+
           <Input
             label="Admin Full Name"
             placeholder="e.g., John Smith"
@@ -178,7 +180,7 @@ export function TenantManagement() {
             onChange={(e) => setNewTenant({ ...newTenant, adminName: e.target.value })}
             required
           />
-          
+
           <Input
             label="Admin Email Address"
             type="email"
@@ -187,7 +189,7 @@ export function TenantManagement() {
             onChange={(e) => setNewTenant({ ...newTenant, adminEmail: e.target.value })}
             required
           />
-          
+
           <div>
             <label className="text-foreground mb-2 block">Admin Password</label>
             <div className="flex gap-2">
@@ -203,7 +205,7 @@ export function TenantManagement() {
               </Button>
             </div>
           </div>
-          
+
           <div>
             <label className="text-foreground mb-2 block">Subscription Plan</label>
             <select
@@ -216,7 +218,7 @@ export function TenantManagement() {
               <option value="enterprise">Enterprise</option>
             </select>
           </div>
-          
+
           <div className="flex gap-2 pt-4">
             <Button type="button" variant="secondary" onClick={() => setShowCreateModal(false)} className="flex-1">
               Cancel
