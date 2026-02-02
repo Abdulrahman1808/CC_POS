@@ -9,7 +9,8 @@ using POSSystem.Services.Interfaces;
 namespace POSSystem.Services;
 
 /// <summary>
-/// Manages software licensing and developer mode activation.
+/// Manages software licensing, developer mode, and multi-tenant business context.
+/// License keys contain embedded BusinessId for tenant isolation.
 /// Developer mode is activated with the DevSecret2026 key.
 /// </summary>
 public class LicenseManager : ILicenseManager
@@ -17,7 +18,11 @@ public class LicenseManager : ILicenseManager
     private const string DeveloperSecretKey = "DevSecret2026";
     private const string LicenseFileName = ".license";
     
+    // Developer mode uses a fixed BusinessId for testing
+    private static readonly Guid DeveloperBusinessId = new("DEV00000-0000-0000-0000-000000000001");
+    
     private readonly IHardwareIdService _hardwareIdService;
+    private readonly ITenantContext _tenantContext;
     private readonly IConfiguration _configuration;
     private readonly string _licensePath;
     
@@ -25,9 +30,13 @@ public class LicenseManager : ILicenseManager
     private bool _isDeveloperMode = false;
     private string? _activeLicenseKey;
     
-    public LicenseManager(IHardwareIdService hardwareIdService, IConfiguration configuration)
+    public LicenseManager(
+        IHardwareIdService hardwareIdService, 
+        ITenantContext tenantContext,
+        IConfiguration configuration)
     {
         _hardwareIdService = hardwareIdService ?? throw new ArgumentNullException(nameof(hardwareIdService));
+        _tenantContext = tenantContext ?? throw new ArgumentNullException(nameof(tenantContext));
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         
         _licensePath = Path.Combine(
@@ -49,6 +58,9 @@ public class LicenseManager : ILicenseManager
     public string MachineId => _hardwareIdService.GetMachineId();
     
     /// <inheritdoc />
+    public Guid? BusinessId => _tenantContext.CurrentBusinessId;
+    
+    /// <inheritdoc />
     public async Task<bool> ActivateLicenseAsync(string licenseKey)
     {
         if (string.IsNullOrWhiteSpace(licenseKey))
@@ -63,28 +75,34 @@ public class LicenseManager : ILicenseManager
                 _status = LicenseStatus.Developer;
                 _activeLicenseKey = licenseKey;
                 
+                // Set developer BusinessId in tenant context
+                _tenantContext.SetBusinessContext(DeveloperBusinessId);
+                
                 // Save developer key
                 await SaveLicenseKeyAsync(licenseKey);
                 
-                Debug.WriteLine("[LicenseManager] ⚠️ DEVELOPER MODE ACTIVATED");
+                Debug.WriteLine($"[LicenseManager] ⚠️ DEVELOPER MODE ACTIVATED - BusinessId: {DeveloperBusinessId}");
                 return true;
             }
             
-            // Normal license validation
-            var isValid = await ValidateLicenseKeyAsync(licenseKey);
+            // Normal license validation with BusinessId extraction
+            var (isValid, businessId) = await ValidateLicenseKeyWithBusinessIdAsync(licenseKey);
             
-            if (isValid)
+            if (isValid && businessId.HasValue)
             {
                 _status = LicenseStatus.Valid;
                 _activeLicenseKey = licenseKey;
                 _isDeveloperMode = false;
                 
+                // Set the BusinessId in tenant context
+                _tenantContext.SetBusinessContext(businessId.Value);
+                
                 await SaveLicenseKeyAsync(licenseKey);
-                Debug.WriteLine("[LicenseManager] License activated successfully");
+                Debug.WriteLine($"[LicenseManager] License activated - BusinessId: {businessId.Value}");
                 return true;
             }
             
-            Debug.WriteLine("[LicenseManager] License key invalid");
+            Debug.WriteLine("[LicenseManager] License key invalid or missing BusinessId");
             return false;
         }
         catch (Exception ex)
@@ -105,10 +123,11 @@ public class LicenseManager : ILicenseManager
             
             if (string.IsNullOrEmpty(storedKey))
             {
-                // Check if in DEBUG mode - auto-enable trial
+                // Check if in DEBUG mode - auto-enable trial with developer BusinessId
 #if DEBUG
                 _status = LicenseStatus.Trial;
-                Debug.WriteLine("[LicenseManager] DEBUG build - Trial mode enabled");
+                _tenantContext.SetBusinessContext(DeveloperBusinessId);
+                Debug.WriteLine("[LicenseManager] DEBUG build - Trial mode enabled with Developer BusinessId");
 #else
                 _status = LicenseStatus.NotFound;
 #endif
@@ -121,14 +140,27 @@ public class LicenseManager : ILicenseManager
                 _isDeveloperMode = true;
                 _status = LicenseStatus.Developer;
                 _activeLicenseKey = storedKey;
-                Debug.WriteLine("[LicenseManager] ⚠️ DEVELOPER MODE ACTIVE");
+                
+                // Ensure tenant context is set for developer mode
+                if (!_tenantContext.IsContextValid)
+                {
+                    _tenantContext.SetBusinessContext(DeveloperBusinessId);
+                }
+                
+                Debug.WriteLine($"[LicenseManager] ⚠️ DEVELOPER MODE ACTIVE - BusinessId: {_tenantContext.CurrentBusinessId}");
                 return _status;
             }
             
-            // Validate stored key
-            var isValid = await ValidateLicenseKeyAsync(storedKey);
+            // Validate stored key and extract BusinessId
+            var (isValid, businessId) = await ValidateLicenseKeyWithBusinessIdAsync(storedKey);
             _status = isValid ? LicenseStatus.Valid : LicenseStatus.Expired;
             _activeLicenseKey = storedKey;
+            
+            // Restore tenant context if valid
+            if (isValid && businessId.HasValue && !_tenantContext.IsContextValid)
+            {
+                _tenantContext.SetBusinessContext(businessId.Value);
+            }
             
             return _status;
         }
@@ -171,31 +203,64 @@ public class LicenseManager : ILicenseManager
     }
     
     /// <summary>
-    /// Validates a license key against the licensing server or local rules.
+    /// Validates a license key and extracts the embedded BusinessId.
+    /// License key format: POSKEY-{BusinessIdPrefix}-{Hash}-{MachinePrefix}
+    /// Example: POSKEY-A1B2C3D4-randomhash123-12345678
     /// </summary>
-    private async Task<bool> ValidateLicenseKeyAsync(string licenseKey)
+    private async Task<(bool IsValid, Guid? BusinessId)> ValidateLicenseKeyWithBusinessIdAsync(string licenseKey)
     {
         // TODO: Implement actual license server validation
-        // For now, use local validation logic
+        // For now, use local validation logic with BusinessId extraction
         
         await Task.Delay(100); // Simulate network call
         
-        // Basic validation: Must be 20+ characters and contain machine ID parts
+        // Basic validation: Must be 20+ characters
         if (licenseKey.Length < 20)
-            return false;
+            return (false, null);
         
         // Check if key contains a valid signature pattern
-        // Format: POSKEY-{hash}-{machinePrefix}
+        // Format: POSKEY-{BusinessIdPrefix}-{Hash}-{MachinePrefix}
         if (licenseKey.StartsWith("POSKEY-"))
         {
-            var machineId = _hardwareIdService.GetMachineId();
-            var machinePrefix = machineId.Substring(0, 8);
+            var parts = licenseKey.Split('-');
             
-            // Key should end with machine prefix for device binding
-            return licenseKey.EndsWith(machinePrefix);
+            // Expect at least 4 parts: POSKEY, BusinessIdPrefix, Hash, MachinePrefix
+            if (parts.Length >= 4)
+            {
+                var businessIdPrefix = parts[1];
+                var machinePrefix = parts[^1]; // Last part
+                
+                // Validate machine binding
+                var machineId = _hardwareIdService.GetMachineId();
+                var expectedMachinePrefix = machineId.Substring(0, Math.Min(8, machineId.Length));
+                
+                if (machinePrefix != expectedMachinePrefix)
+                {
+                    Debug.WriteLine($"[LicenseManager] Machine mismatch: expected {expectedMachinePrefix}, got {machinePrefix}");
+                    return (false, null);
+                }
+                
+                // Generate deterministic BusinessId from prefix
+                // This creates a consistent GUID from the 8-character prefix
+                var businessId = GenerateBusinessIdFromPrefix(businessIdPrefix);
+                
+                return (true, businessId);
+            }
         }
         
-        return false;
+        return (false, null);
+    }
+    
+    /// <summary>
+    /// Generates a deterministic BusinessId GUID from a license key prefix.
+    /// </summary>
+    private static Guid GenerateBusinessIdFromPrefix(string prefix)
+    {
+        // Pad or truncate to 8 characters, then create a deterministic GUID
+        var normalizedPrefix = (prefix + "00000000").Substring(0, 8);
+        
+        // Create GUID in format: PREFIX00-0000-0000-0000-000000000000
+        return new Guid($"{normalizedPrefix}-0000-0000-0000-000000000000");
     }
     
     /// <summary>

@@ -7,21 +7,28 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using POSSystem.Data.Interfaces;
 using POSSystem.Models;
+using POSSystem.Services.Interfaces;
 
 namespace POSSystem.Data;
 
 /// <summary>
 /// SQLite implementation of IDataService with automatic sync queue tracking.
 /// Uses IDbContextFactory to create fresh contexts per operation for thread safety.
+/// Auto-populates BusinessId from TenantContext for multi-tenant support.
 /// </summary>
 public class SqliteDataService : IDataService
 {
     private readonly IDbContextFactory<AppDbContext> _contextFactory;
+    private readonly ITenantContext _tenantContext;
 
-    public SqliteDataService(IDbContextFactory<AppDbContext> contextFactory)
+    public SqliteDataService(
+        IDbContextFactory<AppDbContext> contextFactory,
+        ITenantContext tenantContext)
     {
         _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
+        _tenantContext = tenantContext ?? throw new ArgumentNullException(nameof(tenantContext));
     }
+
 
     #region Products
 
@@ -93,6 +100,12 @@ public class SqliteDataService : IDataService
             using var context = _contextFactory.CreateDbContext();
             product.CreatedAt = DateTime.UtcNow;
             product.UpdatedAt = DateTime.UtcNow;
+            
+            // Auto-populate BusinessId for multi-tenant isolation
+            if (_tenantContext.IsContextValid && product.BusinessId == null)
+            {
+                product.BusinessId = _tenantContext.CurrentBusinessId;
+            }
             
             await context.Products.AddAsync(product);
             await context.SaveChangesAsync();
@@ -242,7 +255,13 @@ public class SqliteDataService : IDataService
             transaction.CreatedAt = DateTime.UtcNow;
             transaction.CalculateTotals();
             
-            Debug.WriteLine($"[CreateTransaction] Total: {transaction.Total}, Number: {transaction.TransactionNumber}");
+            // Auto-populate BusinessId for multi-tenant isolation
+            if (_tenantContext.IsContextValid && transaction.BusinessId == null)
+            {
+                transaction.BusinessId = _tenantContext.CurrentBusinessId;
+            }
+            
+            Debug.WriteLine($"[CreateTransaction] Total: {transaction.Total}, Number: {transaction.TransactionNumber}, BusinessId: {transaction.BusinessId}");
 
             await context.Transactions.AddAsync(transaction);
             await context.SaveChangesAsync();

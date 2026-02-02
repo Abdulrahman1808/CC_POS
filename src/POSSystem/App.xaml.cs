@@ -185,6 +185,9 @@ public partial class App : Application
 
         // ===== HARDWARE & LICENSE SERVICES =====
         services.AddSingleton<IHardwareIdService, HardwareIdService>();
+        
+        // TenantContext must be registered before LicenseManager (dependency)
+        services.AddSingleton<ITenantContext, TenantContext>();
         services.AddSingleton<ILicenseManager, LicenseManager>();
 
         // ===== DOCUMENT GENERATION SERVICES =====

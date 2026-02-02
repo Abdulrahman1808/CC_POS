@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using POSSystem.Models;
 
@@ -23,6 +24,12 @@ public interface ILicenseManager
     /// Gets the current machine ID.
     /// </summary>
     string MachineId { get; }
+    
+    /// <summary>
+    /// Gets the BusinessId associated with the activated license.
+    /// Used for multi-tenant data isolation.
+    /// </summary>
+    Guid? BusinessId { get; }
     
     /// <summary>
     /// Activates a license key for this machine.

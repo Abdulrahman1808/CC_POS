@@ -14,12 +14,14 @@ using POSSystem.Services.Interfaces;
 namespace POSSystem.Services;
 
 /// <summary>
-/// Cloud sync service using Supabase REST API.
+/// Cloud sync service using Supabase REST API with multi-tenant support.
 /// Runs in background via Task.Run, checking SyncQueue every 30 seconds.
+/// Uses X-Business-Id header for Row Level Security tenant isolation.
 /// </summary>
 public class CloudSyncService : ISyncService, IDisposable
 {
     private readonly IDataService _dataService;
+    private readonly ITenantContext _tenantContext;
     private readonly IConfiguration _configuration;
     private readonly HttpClient _httpClient;
     private Timer? _syncTimer;
@@ -40,9 +42,13 @@ public class CloudSyncService : ISyncService, IDisposable
     public bool IsOnline => _isOnline;
     public int PendingCount => _pendingCount;
 
-    public CloudSyncService(IDataService dataService, IConfiguration configuration)
+    public CloudSyncService(
+        IDataService dataService, 
+        ITenantContext tenantContext,
+        IConfiguration configuration)
     {
         _dataService = dataService ?? throw new ArgumentNullException(nameof(dataService));
+        _tenantContext = tenantContext ?? throw new ArgumentNullException(nameof(tenantContext));
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
         _supabaseUrl = _configuration["Supabase:Url"];
@@ -66,8 +72,32 @@ public class CloudSyncService : ISyncService, IDisposable
             _httpClient.DefaultRequestHeaders.Add("apikey", _supabaseKey);
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _supabaseKey);
             _httpClient.DefaultRequestHeaders.Add("Prefer", "return=representation");
+            
+            // Add X-Business-Id header for multi-tenant RLS
+            // This is updated on each request in case the tenant context changes
+            Debug.WriteLine("[CloudSync] HTTP client configured for Supabase");
         }
     }
+    
+    /// <summary>
+    /// Adds the X-Business-Id header for multi-tenant RLS before each request.
+    /// </summary>
+    private void EnsureBusinessIdHeader()
+    {
+        // Remove existing header if present
+        _httpClient.DefaultRequestHeaders.Remove("X-Business-Id");
+        
+        if (_tenantContext.IsContextValid && _tenantContext.CurrentBusinessId.HasValue)
+        {
+            _httpClient.DefaultRequestHeaders.Add("X-Business-Id", _tenantContext.CurrentBusinessId.Value.ToString());
+            Debug.WriteLine($"[CloudSync] X-Business-Id header set: {_tenantContext.CurrentBusinessId.Value}");
+        }
+        else
+        {
+            Debug.WriteLine("[CloudSync] ⚠️ No valid BusinessId - sync will fail RLS policies");
+        }
+    }
+
 
     private bool IsConfigured => !string.IsNullOrEmpty(_supabaseUrl) && 
                                   !string.IsNullOrEmpty(_supabaseKey) && 
@@ -193,6 +223,16 @@ public class CloudSyncService : ISyncService, IDisposable
             _isOnline = false;
             return false;
         }
+        
+        // Ensure tenant context is set for RLS
+        if (!_tenantContext.IsContextValid)
+        {
+            Debug.WriteLine("[Sync] ⚠️ Cannot sync - no valid tenant context");
+            return false;
+        }
+        
+        // Set X-Business-Id header for RLS
+        EnsureBusinessIdHeader();
 
         if (!_isOnline)
         {
