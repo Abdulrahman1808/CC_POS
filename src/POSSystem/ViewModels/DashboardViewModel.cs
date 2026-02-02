@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using POSSystem.Data;
 using POSSystem.Data.Interfaces;
@@ -345,27 +346,79 @@ public partial class DashboardViewModel : ObservableObject
 
     private async Task ProcessCardPaymentAsync()
     {
-        // Simulate bank authorization delay
-        Debug.WriteLine("[Payment] Card: Authorizing with bank...");
-        await Task.Delay(2500); // Simulate terminal delay
-        Debug.WriteLine("[Payment] Card: Authorization approved");
+        Debug.WriteLine("[Payment] Card: Processing with Stripe...");
         
-        var transaction = CreateTransaction();
-        
-        if (await _dataService.CreateTransactionAsync(transaction))
+        try
         {
-            ChangeAmount = 0; // No change for card
+            // Get payment service
+            var paymentService = App.Current.Services.GetService<IPaymentService>();
             
+            if (paymentService != null && paymentService.IsConfigured)
+            {
+                // Convert to smallest currency unit (piastres for EGP)
+                var amountInPiastres = (long)(TotalAmount * 100);
+                
+                var result = await paymentService.ProcessCardPaymentAsync(
+                    amountInPiastres,
+                    "egp",
+                    $"POS Sale - {CartItems.Count} items",
+                    CustomerPhone);
+                
+                if (!result.Success)
+                {
+                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        System.Windows.MessageBox.Show(
+                            $"Card payment failed:\n\n{result.ErrorMessage}",
+                            "Payment Failed",
+                            System.Windows.MessageBoxButton.OK,
+                            System.Windows.MessageBoxImage.Error);
+                    });
+                    return;
+                }
+                
+                Debug.WriteLine($"[Payment] Card: Stripe payment succeeded - {result.TransactionId}");
+                
+                // Create local transaction with Stripe reference
+                var transaction = CreateTransaction();
+                transaction.PaymentReference = result.TransactionId;
+            }
+            else
+            {
+                // Simulate payment when Stripe not configured
+                Debug.WriteLine("[Payment] Card: Simulating (Stripe not configured)...");
+                await Task.Delay(1500);
+            }
+            
+            var localTransaction = CreateTransaction();
+            
+            if (await _dataService.CreateTransactionAsync(localTransaction))
+            {
+                ChangeAmount = 0; // No change for card
+                
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    System.Windows.MessageBox.Show(
+                        $"Card Payment Approved!\\n\\nTotal: {TotalAmount:C2}",
+                        "Payment Success",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Information);
+                });
+                
+                CompleteCheckout();
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Payment] Card error: {ex.Message}");
             await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 System.Windows.MessageBox.Show(
-                    $"Card Payment Approved!\n\nTotal: {TotalAmount:C2}",
-                    "Payment Success",
+                    $"Payment error:\n\n{ex.Message}",
+                    "Payment Error",
                     System.Windows.MessageBoxButton.OK,
-                    System.Windows.MessageBoxImage.Information);
+                    System.Windows.MessageBoxImage.Error);
             });
-            
-            CompleteCheckout();
         }
     }
 
@@ -595,61 +648,93 @@ public partial class DashboardViewModel : ObservableObject
             System.Windows.MessageBoxButton.YesNo,
             System.Windows.MessageBoxImage.Warning);
         
-        if (result == System.Windows.MessageBoxResult.Yes)
+        if (result != System.Windows.MessageBoxResult.Yes) return;
+        
+        Debug.WriteLine("[DevMode] Clearing test data...");
+        
+        IsProcessing = true;
+        try
         {
-            Debug.WriteLine("[DevMode] Clearing test data...");
+            // Get counts before clearing for notification
+            int transactionCount = 0;
+            decimal totalSales = 0;
             
-            IsProcessing = true;
-            try
+            try 
             {
-                var success = await _dataService.ClearAllDataAsync();
-                if (success)
-                {
-                    // Update daily sales and transaction count locally
-                    DailySales = 0;
-                    TransactionCount = 0;
-                    PendingSyncCount = 0;
-                    
-                    await RefreshDataAsync();
-                    
-                    // Send notification (Implementation in next step)
-                    try 
-                    {
-                        var emailService = App.Current.Services.GetService<EmailService>();
-                        if (emailService != null)
-                        {
-                            await emailService.SendTransactionClearNotificationAsync(
-                                "Developer Mode / Admin", 
-                                0, // Count already cleared 
-                                0);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"[DevMode] Email notification failed: {ex.Message}");
-                    }
+                using var scope = App.Current.Services.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                transactionCount = await db.Transactions.CountAsync();
+                totalSales = transactionCount > 0 
+                    ? await db.Transactions.SumAsync(t => t.Total) 
+                    : 0m;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DevMode] Error getting stats: {ex.Message}");
+            }
 
+            var success = await _dataService.ClearAllDataAsync();
+            if (success)
+            {
+                // Update local state
+                DailySales = 0;
+                TransactionCount = 0;
+                PendingSyncCount = 0;
+                
+                await RefreshDataAsync();
+                
+                // Send admin notification
+                try 
+                {
+                    var emailService = App.Current.Services.GetService<IEmailService>();
+                    if (emailService != null && transactionCount > 0)
+                    {
+                        await emailService.SendTransactionClearNotificationAsync(
+                            "Developer Mode",
+                            transactionCount,
+                            totalSales);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[DevMode] Email notification failed: {ex.Message}");
+                }
+
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
                     System.Windows.MessageBox.Show(
-                        "All test data has been cleared successfully.",
-                        "Success",
+                        $"✅ Test data cleared successfully!\n\n" +
+                        $"Transactions deleted: {transactionCount}\n" +
+                        $"Total sales cleared: {totalSales:C2}",
+                        "Clear Complete",
                         System.Windows.MessageBoxButton.OK,
                         System.Windows.MessageBoxImage.Information);
-                }
-                else
-                {
-                    System.Windows.MessageBox.Show(
-                        "Failed to clear data. Check logs for details.",
-                        "Error",
-                        System.Windows.MessageBoxButton.OK,
-                        System.Windows.MessageBoxImage.Error);
-                }
+                });
             }
-            finally
+            else
             {
-                IsProcessing = false;
+                System.Windows.MessageBox.Show(
+                    "Failed to clear data. Check logs for details.",
+                    "Error",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Error);
             }
-            
-            Debug.WriteLine("[DevMode] Test data clear operation finished");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[DevMode] Error clearing test data: {ex.Message}");
+            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                System.Windows.MessageBox.Show(
+                    $"Error clearing test data:\n{ex.Message}",
+                    "Error",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Error);
+            });
+        }
+        finally
+        {
+            IsProcessing = false;
         }
     }
 
