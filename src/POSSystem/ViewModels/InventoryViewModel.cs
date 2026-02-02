@@ -6,8 +6,10 @@ using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
 using POSSystem.Data.Interfaces;
 using POSSystem.Models;
+using POSSystem.Services.Interfaces;
 
 namespace POSSystem.ViewModels;
 
@@ -70,6 +72,15 @@ public partial class InventoryViewModel : ObservableObject
     [ObservableProperty]
     private int _dialogMinStock = 5;
 
+    [ObservableProperty]
+    private ObservableCollection<Product> _lowStockProducts = new();
+    
+    [ObservableProperty]
+    private int _lowStockCount;
+    
+    [ObservableProperty]
+    private bool _showLowStockOnly;
+
     private Guid? _editingProductId;
 
     private bool _selectAll;
@@ -86,6 +97,8 @@ public partial class InventoryViewModel : ObservableObject
             }
         }
     }
+    
+    partial void OnShowLowStockOnlyChanged(bool value) => _ = LoadProductsAsync();
 
     public InventoryViewModel(IDataService dataService)
     {
@@ -111,9 +124,21 @@ public partial class InventoryViewModel : ObservableObject
         IsLoading = true;
         try
         {
-            var products = await _dataService.GetAllProductsAsync();
+            var allProducts = (await _dataService.GetAllProductsAsync()).ToList();
+            
+            // Track low stock products
+            var lowStock = allProducts.Where(p => p.StockQuantity <= p.MinStockLevel).ToList();
+            LowStockProducts = new ObservableCollection<Product>(lowStock);
+            LowStockCount = lowStock.Count;
             
             // Apply filters
+            var products = allProducts.AsEnumerable();
+            
+            if (ShowLowStockOnly)
+            {
+                products = lowStock;
+            }
+            
             if (!string.IsNullOrWhiteSpace(SearchText))
             {
                 var term = SearchText.ToLower();
@@ -129,7 +154,7 @@ public partial class InventoryViewModel : ObservableObject
             }
 
             Products = new ObservableCollection<Product>(products);
-            Debug.WriteLine($"[Inventory] Loaded {Products.Count} products");
+            Debug.WriteLine($"[Inventory] Loaded {Products.Count} products ({LowStockCount} low stock)");
         }
         catch (Exception ex)
         {
@@ -322,17 +347,118 @@ public partial class InventoryViewModel : ObservableObject
         var product = await _dataService.GetProductByIdAsync(productId);
         if (product != null)
         {
+            var previousStock = product.StockQuantity;
             product.StockQuantity = Math.Max(0, product.StockQuantity - quantity);
             product.LastUpdatedBy = UpdateSource.Desktop;
             await _dataService.UpdateProductAsync(product);
             
             Debug.WriteLine($"[Inventory] Stock decremented: {product.Name} now has {product.StockQuantity}");
 
-            // Check low stock warning
-            if (product.StockQuantity <= product.MinStockLevel)
+            // Check if this decrement caused low stock condition
+            var wasAboveMinimum = previousStock > product.MinStockLevel;
+            var isNowBelowMinimum = product.StockQuantity <= product.MinStockLevel;
+            
+            if (wasAboveMinimum && isNowBelowMinimum)
             {
                 Debug.WriteLine($"[Inventory] ⚠️ Low stock warning: {product.Name}");
+                await SendLowStockAlertAsync(product);
+            }
+            
+            // Check for out of stock
+            if (product.StockQuantity == 0 && previousStock > 0)
+            {
+                Debug.WriteLine($"[Inventory] 🚨 OUT OF STOCK: {product.Name}");
+                await SendOutOfStockAlertAsync(product);
             }
         }
     }
+    
+    private async Task SendLowStockAlertAsync(Product product)
+    {
+        try
+        {
+            var emailService = App.Current.Services.GetService<IEmailService>();
+            if (emailService == null) return;
+            
+            var subject = $"⚠️ Low Stock Alert: {product.Name}";
+            var body = $@"
+<html>
+<body style='font-family: Arial, sans-serif;'>
+    <h2 style='color: #F59E0B;'>⚠️ Low Stock Warning</h2>
+    <p>The following product is running low on stock:</p>
+    
+    <table style='border-collapse: collapse; margin: 20px 0;'>
+        <tr>
+            <td style='padding: 10px; border: 1px solid #ddd; font-weight: bold;'>Product</td>
+            <td style='padding: 10px; border: 1px solid #ddd;'>{product.Name}</td>
+        </tr>
+        <tr>
+            <td style='padding: 10px; border: 1px solid #ddd; font-weight: bold;'>SKU</td>
+            <td style='padding: 10px; border: 1px solid #ddd;'>{product.Sku ?? "N/A"}</td>
+        </tr>
+        <tr>
+            <td style='padding: 10px; border: 1px solid #ddd; font-weight: bold;'>Current Stock</td>
+            <td style='padding: 10px; border: 1px solid #ddd; color: #F59E0B; font-weight: bold;'>{product.StockQuantity}</td>
+        </tr>
+        <tr>
+            <td style='padding: 10px; border: 1px solid #ddd; font-weight: bold;'>Minimum Level</td>
+            <td style='padding: 10px; border: 1px solid #ddd;'>{product.MinStockLevel}</td>
+        </tr>
+    </table>
+    
+    <p>Please restock this item soon.</p>
+    <p style='color: #666;'>This is an automated notification from POS System.</p>
+</body>
+</html>";
+
+            await emailService.SendAdminNotificationAsync(subject, body);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Inventory] Failed to send low stock alert: {ex.Message}");
+        }
+    }
+    
+    private async Task SendOutOfStockAlertAsync(Product product)
+    {
+        try
+        {
+            var emailService = App.Current.Services.GetService<IEmailService>();
+            if (emailService == null) return;
+            
+            var subject = $"🚨 OUT OF STOCK: {product.Name}";
+            var body = $@"
+<html>
+<body style='font-family: Arial, sans-serif;'>
+    <h2 style='color: #DC2626;'>🚨 Out of Stock Alert</h2>
+    <p>The following product is now <strong>OUT OF STOCK</strong>:</p>
+    
+    <table style='border-collapse: collapse; margin: 20px 0;'>
+        <tr>
+            <td style='padding: 10px; border: 1px solid #ddd; font-weight: bold;'>Product</td>
+            <td style='padding: 10px; border: 1px solid #ddd;'>{product.Name}</td>
+        </tr>
+        <tr>
+            <td style='padding: 10px; border: 1px solid #ddd; font-weight: bold;'>SKU</td>
+            <td style='padding: 10px; border: 1px solid #ddd;'>{product.Sku ?? "N/A"}</td>
+        </tr>
+        <tr>
+            <td style='padding: 10px; border: 1px solid #ddd; font-weight: bold;'>Category</td>
+            <td style='padding: 10px; border: 1px solid #ddd;'>{product.Category ?? "Uncategorized"}</td>
+        </tr>
+    </table>
+    
+    <p style='color: #DC2626; font-weight: bold;'>Immediate restocking required!</p>
+    <p style='color: #666;'>This is an automated notification from POS System.</p>
+</body>
+</html>";
+
+            await emailService.SendAdminNotificationAsync(subject, body);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Inventory] Failed to send out of stock alert: {ex.Message}");
+        }
+    }
 }
+

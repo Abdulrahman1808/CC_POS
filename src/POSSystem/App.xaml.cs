@@ -196,6 +196,9 @@ public partial class App : Application
         
         // Email Service (admin notifications)
         services.AddSingleton<IEmailService, EmailService>();
+        
+        // Payment Service (Stripe for card payments)
+        services.AddSingleton<IPaymentService, StripePaymentService>();
 
 
         // ViewModels

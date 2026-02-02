@@ -346,27 +346,79 @@ public partial class DashboardViewModel : ObservableObject
 
     private async Task ProcessCardPaymentAsync()
     {
-        // Simulate bank authorization delay
-        Debug.WriteLine("[Payment] Card: Authorizing with bank...");
-        await Task.Delay(2500); // Simulate terminal delay
-        Debug.WriteLine("[Payment] Card: Authorization approved");
+        Debug.WriteLine("[Payment] Card: Processing with Stripe...");
         
-        var transaction = CreateTransaction();
-        
-        if (await _dataService.CreateTransactionAsync(transaction))
+        try
         {
-            ChangeAmount = 0; // No change for card
+            // Get payment service
+            var paymentService = App.Current.Services.GetService<IPaymentService>();
             
+            if (paymentService != null && paymentService.IsConfigured)
+            {
+                // Convert to smallest currency unit (piastres for EGP)
+                var amountInPiastres = (long)(TotalAmount * 100);
+                
+                var result = await paymentService.ProcessCardPaymentAsync(
+                    amountInPiastres,
+                    "egp",
+                    $"POS Sale - {CartItems.Count} items",
+                    CustomerPhone);
+                
+                if (!result.Success)
+                {
+                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        System.Windows.MessageBox.Show(
+                            $"Card payment failed:\n\n{result.ErrorMessage}",
+                            "Payment Failed",
+                            System.Windows.MessageBoxButton.OK,
+                            System.Windows.MessageBoxImage.Error);
+                    });
+                    return;
+                }
+                
+                Debug.WriteLine($"[Payment] Card: Stripe payment succeeded - {result.TransactionId}");
+                
+                // Create local transaction with Stripe reference
+                var transaction = CreateTransaction();
+                transaction.PaymentReference = result.TransactionId;
+            }
+            else
+            {
+                // Simulate payment when Stripe not configured
+                Debug.WriteLine("[Payment] Card: Simulating (Stripe not configured)...");
+                await Task.Delay(1500);
+            }
+            
+            var localTransaction = CreateTransaction();
+            
+            if (await _dataService.CreateTransactionAsync(localTransaction))
+            {
+                ChangeAmount = 0; // No change for card
+                
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    System.Windows.MessageBox.Show(
+                        $"Card Payment Approved!\\n\\nTotal: {TotalAmount:C2}",
+                        "Payment Success",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Information);
+                });
+                
+                CompleteCheckout();
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Payment] Card error: {ex.Message}");
             await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 System.Windows.MessageBox.Show(
-                    $"Card Payment Approved!\n\nTotal: {TotalAmount:C2}",
-                    "Payment Success",
+                    $"Payment error:\n\n{ex.Message}",
+                    "Payment Error",
                     System.Windows.MessageBoxButton.OK,
-                    System.Windows.MessageBoxImage.Information);
+                    System.Windows.MessageBoxImage.Error);
             });
-            
-            CompleteCheckout();
         }
     }
 
