@@ -32,12 +32,22 @@ public class PdfInvoiceService : IPdfInvoiceService
     {
         _licenseManager = licenseManager ?? throw new ArgumentNullException(nameof(licenseManager));
         
+        // Use Desktop for invoices - more accessible and avoids OneDrive sync issues
         _outputDirectory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-            "POSSystem",
-            "Invoices");
+            Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+            "POSSystem_Invoices");
         
-        Directory.CreateDirectory(_outputDirectory);
+        try
+        {
+            Directory.CreateDirectory(_outputDirectory);
+        }
+        catch (Exception ex)
+        {
+            // Fallback to temp directory if Desktop fails
+            Debug.WriteLine($"[PdfInvoice] Could not create output directory: {ex.Message}");
+            _outputDirectory = Path.Combine(Path.GetTempPath(), "POSSystem_Invoices");
+            Directory.CreateDirectory(_outputDirectory);
+        }
     }
     
     /// <inheritdoc />

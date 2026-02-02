@@ -47,6 +47,14 @@ public partial class ReportsViewModel : ObservableObject
 {
     private readonly IDataService _dataService;
 
+    /// <summary>
+    /// Static constructor to initialize QuestPDF Community License.
+    /// </summary>
+    static ReportsViewModel()
+    {
+        QuestPDF.Settings.License = LicenseType.Community;
+    }
+
     [ObservableProperty]
     private string _selectedPeriod = "Today";
 

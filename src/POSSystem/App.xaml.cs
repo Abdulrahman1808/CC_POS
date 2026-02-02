@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
 using System.Net.Http;
 using System.Windows;
 using System.Windows.Threading;
@@ -145,24 +146,29 @@ public partial class App : Application
         // HttpClient
         services.AddSingleton<HttpClient>();
 
-        // Database
-        var connectionString = _configuration["Database:ConnectionString"] ?? "Data Source=posdata.db";
+        // Database - Use AppData folder to avoid permission issues in Program Files
+        var appDataPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "POSSystem");
+        Directory.CreateDirectory(appDataPath); // Ensure directory exists
+        
+        var dbPath = Path.Combine(appDataPath, "posdata.db");
+        var connectionString = $"Data Source={dbPath}";
+        
+        Debug.WriteLine($"[App] Database path: {dbPath}");
+        
         services.AddDbContext<AppDbContext>(options => options.UseSqlite(connectionString));
+        services.AddDbContextFactory<AppDbContext>(options => options.UseSqlite(connectionString));
 
-        // Data Services
-        services.AddScoped<IDataService, SqliteDataService>();
+        // Data Services - Singleton to avoid disposed context issues with background sync
+        services.AddSingleton<IDataService, SqliteDataService>();
 
         // Business Services
         services.AddSingleton<ILicenseService, LicenseService>();
         services.AddSingleton<IUpdateService, UpdateService>();
 
-        // Cloud Sync Service (uses Task.Run for background operation)
-        services.AddSingleton<ISyncService>(sp =>
-        {
-            using var scope = sp.CreateScope();
-            var dataService = scope.ServiceProvider.GetRequiredService<IDataService>();
-            return new CloudSyncService(dataService, _configuration);
-        });
+        // Cloud Sync Service
+        services.AddSingleton<ISyncService, CloudSyncService>();
 
         // Settings & Auth Services (Cloud Bridge)
         services.AddScoped<ISettingsService, SettingsService>();

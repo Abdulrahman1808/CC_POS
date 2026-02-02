@@ -12,22 +12,23 @@ namespace POSSystem.Data;
 
 /// <summary>
 /// SQLite implementation of IDataService with automatic sync queue tracking.
-/// All operations are async to prevent UI blocking.
+/// Uses IDbContextFactory to create fresh contexts per operation for thread safety.
 /// </summary>
 public class SqliteDataService : IDataService
 {
-    private readonly AppDbContext _context;
+    private readonly IDbContextFactory<AppDbContext> _contextFactory;
 
-    public SqliteDataService(AppDbContext context)
+    public SqliteDataService(IDbContextFactory<AppDbContext> contextFactory)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
+        _contextFactory = contextFactory ?? throw new ArgumentNullException(nameof(contextFactory));
     }
 
     #region Products
 
     public async Task<IEnumerable<Product>> GetAllProductsAsync()
     {
-        return await _context.Products
+        using var context = _contextFactory.CreateDbContext();
+        return await context.Products
             .Where(p => !p.IsDeleted)
             .OrderBy(p => p.Name)
             .ToListAsync();
@@ -35,7 +36,8 @@ public class SqliteDataService : IDataService
 
     public async Task<Product?> GetProductByIdAsync(Guid id)
     {
-        return await _context.Products
+        using var context = _contextFactory.CreateDbContext();
+        return await context.Products
             .FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted);
     }
 
@@ -43,7 +45,8 @@ public class SqliteDataService : IDataService
     {
         if (string.IsNullOrWhiteSpace(barcode)) return null;
         
-        return await _context.Products
+        using var context = _contextFactory.CreateDbContext();
+        return await context.Products
             .FirstOrDefaultAsync(p => p.Barcode == barcode && !p.IsDeleted);
     }
 
@@ -52,8 +55,9 @@ public class SqliteDataService : IDataService
         if (string.IsNullOrWhiteSpace(searchTerm))
             return await GetAllProductsAsync();
 
+        using var context = _contextFactory.CreateDbContext();
         var term = searchTerm.ToLower();
-        return await _context.Products
+        return await context.Products
             .Where(p => !p.IsDeleted && 
                        (p.Name.ToLower().Contains(term) || 
                         (p.Barcode != null && p.Barcode.Contains(term)) ||
@@ -64,7 +68,8 @@ public class SqliteDataService : IDataService
 
     public async Task<IEnumerable<Product>> GetProductsByCategoryAsync(string category)
     {
-        return await _context.Products
+        using var context = _contextFactory.CreateDbContext();
+        return await context.Products
             .Where(p => !p.IsDeleted && p.Category == category)
             .OrderBy(p => p.Name)
             .ToListAsync();
@@ -72,7 +77,8 @@ public class SqliteDataService : IDataService
 
     public async Task<IEnumerable<string>> GetCategoriesAsync()
     {
-        return await _context.Products
+        using var context = _contextFactory.CreateDbContext();
+        return await context.Products
             .Where(p => !p.IsDeleted && p.Category != null)
             .Select(p => p.Category!)
             .Distinct()
@@ -84,11 +90,12 @@ public class SqliteDataService : IDataService
     {
         try
         {
+            using var context = _contextFactory.CreateDbContext();
             product.CreatedAt = DateTime.UtcNow;
             product.UpdatedAt = DateTime.UtcNow;
             
-            await _context.Products.AddAsync(product);
-            await _context.SaveChangesAsync();
+            await context.Products.AddAsync(product);
+            await context.SaveChangesAsync();
 
             // Add to sync queue
             await AddToSyncQueueAsync(new SyncRecord
@@ -111,7 +118,8 @@ public class SqliteDataService : IDataService
     {
         try
         {
-            var existing = await _context.Products.FindAsync(product.Id);
+            using var context = _contextFactory.CreateDbContext();
+            var existing = await context.Products.FindAsync(product.Id);
             if (existing == null) return false;
 
             existing.Name = product.Name;
@@ -123,7 +131,7 @@ public class SqliteDataService : IDataService
             existing.ImagePath = product.ImagePath;
             existing.UpdatedAt = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
 
             // Add to sync queue
             await AddToSyncQueueAsync(new SyncRecord
@@ -146,19 +154,20 @@ public class SqliteDataService : IDataService
     {
         try
         {
-            var product = await _context.Products.FindAsync(id);
+            using var context = _contextFactory.CreateDbContext();
+            var product = await context.Products.FindAsync(id);
             if (product == null)
             {
                 Debug.WriteLine($"[SqliteDataService] DeleteProduct: Product {id} not found");
                 return false;
             }
 
-            // Soft delete - explicitly mark entity as modified
+            // Soft delete
             product.IsDeleted = true;
             product.UpdatedAt = DateTime.UtcNow;
             
-            _context.Products.Update(product); // Explicit update to ensure EF tracks changes
-            var changes = await _context.SaveChangesAsync();
+            context.Products.Update(product);
+            var changes = await context.SaveChangesAsync();
             
             Debug.WriteLine($"[SqliteDataService] DeleteProduct: {product.Name} - IsDeleted={product.IsDeleted}, SavedChanges={changes}");
 
@@ -185,7 +194,8 @@ public class SqliteDataService : IDataService
 
     public async Task<IEnumerable<Transaction>> GetTransactionsAsync(DateTime? from = null, DateTime? to = null)
     {
-        var query = _context.Transactions
+        using var context = _contextFactory.CreateDbContext();
+        var query = context.Transactions
             .Include(t => t.Items)
             .AsQueryable();
 
@@ -202,14 +212,16 @@ public class SqliteDataService : IDataService
 
     public async Task<Transaction?> GetTransactionByIdAsync(Guid id)
     {
-        return await _context.Transactions
+        using var context = _contextFactory.CreateDbContext();
+        return await context.Transactions
             .Include(t => t.Items)
             .FirstOrDefaultAsync(t => t.Id == id);
     }
 
     public async Task<Transaction?> GetTransactionByNumberAsync(string transactionNumber)
     {
-        return await _context.Transactions
+        using var context = _contextFactory.CreateDbContext();
+        return await context.Transactions
             .Include(t => t.Items)
             .FirstOrDefaultAsync(t => t.TransactionNumber == transactionNumber);
     }
@@ -218,6 +230,7 @@ public class SqliteDataService : IDataService
     {
         try
         {
+            using var context = _contextFactory.CreateDbContext();
             Debug.WriteLine($"[CreateTransaction] Starting for {transaction.Items?.Count ?? 0} items...");
             
             // Generate transaction number if not provided
@@ -231,8 +244,8 @@ public class SqliteDataService : IDataService
             
             Debug.WriteLine($"[CreateTransaction] Total: {transaction.Total}, Number: {transaction.TransactionNumber}");
 
-            await _context.Transactions.AddAsync(transaction);
-            await _context.SaveChangesAsync();
+            await context.Transactions.AddAsync(transaction);
+            await context.SaveChangesAsync();
             
             Debug.WriteLine($"[CreateTransaction] Saved successfully!");
 
@@ -254,7 +267,6 @@ public class SqliteDataService : IDataService
             Debug.WriteLine($"[CreateTransaction] INNER: {innerMsg}");
             Debug.WriteLine($"[CreateTransaction] Stack: {ex.StackTrace}");
             
-            // Show actual error to user for debugging
             System.Windows.Application.Current.Dispatcher.Invoke(() =>
             {
                 System.Windows.MessageBox.Show(
@@ -278,11 +290,11 @@ public class SqliteDataService : IDataService
 
     public async Task<decimal> GetDailySalesTotalAsync(DateTime date)
     {
+        using var context = _contextFactory.CreateDbContext();
         var startOfDay = date.Date;
         var endOfDay = startOfDay.AddDays(1);
         
-        // SQLite doesn't support Sum on decimal, so we load data first
-        var totals = await _context.Transactions
+        var totals = await context.Transactions
             .Where(t => t.CreatedAt >= startOfDay && t.CreatedAt < endOfDay)
             .Select(t => t.Total)
             .ToListAsync();
@@ -292,10 +304,11 @@ public class SqliteDataService : IDataService
 
     private async Task<string> GenerateTransactionNumberAsync()
     {
+        using var context = _contextFactory.CreateDbContext();
         var today = DateTime.UtcNow.Date;
         var tomorrow = today.AddDays(1);
         
-        var count = await _context.Transactions
+        var count = await context.Transactions
             .Where(t => t.CreatedAt >= today && t.CreatedAt < tomorrow)
             .CountAsync();
 
@@ -308,16 +321,18 @@ public class SqliteDataService : IDataService
 
     public async Task<IEnumerable<SyncRecord>> GetPendingSyncRecordsAsync()
     {
-        return await _context.SyncRecords
+        using var context = _contextFactory.CreateDbContext();
+        return await context.SyncRecords
             .Where(s => s.Status == SyncStatus.Pending || s.Status == SyncStatus.Failed)
-            .Where(s => s.RetryCount < 5) // Max 5 retries
+            .Where(s => s.RetryCount < 5)
             .OrderBy(s => s.CreatedAt)
             .ToListAsync();
     }
 
     public async Task<int> GetPendingSyncCountAsync()
     {
-        return await _context.SyncRecords
+        using var context = _contextFactory.CreateDbContext();
+        return await context.SyncRecords
             .Where(s => s.Status == SyncStatus.Pending || s.Status == SyncStatus.Failed)
             .Where(s => s.RetryCount < 5)
             .CountAsync();
@@ -327,13 +342,14 @@ public class SqliteDataService : IDataService
     {
         try
         {
-            var record = await _context.SyncRecords.FindAsync(syncRecordId);
+            using var context = _contextFactory.CreateDbContext();
+            var record = await context.SyncRecords.FindAsync(syncRecordId);
             if (record == null) return false;
 
             record.Status = SyncStatus.Completed;
             record.SyncedAt = DateTime.UtcNow;
             
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
             return true;
         }
         catch
@@ -346,14 +362,15 @@ public class SqliteDataService : IDataService
     {
         try
         {
-            var record = await _context.SyncRecords.FindAsync(syncRecordId);
+            using var context = _contextFactory.CreateDbContext();
+            var record = await context.SyncRecords.FindAsync(syncRecordId);
             if (record == null) return false;
 
             record.Status = SyncStatus.Failed;
             record.RetryCount++;
             record.ErrorMessage = errorMessage;
             
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
             return true;
         }
         catch
@@ -366,8 +383,9 @@ public class SqliteDataService : IDataService
     {
         try
         {
-            await _context.SyncRecords.AddAsync(record);
-            await _context.SaveChangesAsync();
+            using var context = _contextFactory.CreateDbContext();
+            await context.SyncRecords.AddAsync(record);
+            await context.SaveChangesAsync();
             return true;
         }
         catch
@@ -378,12 +396,13 @@ public class SqliteDataService : IDataService
 
     public async Task<int> ClearOldSyncRecordsAsync(DateTime olderThan)
     {
-        var oldRecords = await _context.SyncRecords
+        using var context = _contextFactory.CreateDbContext();
+        var oldRecords = await context.SyncRecords
             .Where(s => s.Status == SyncStatus.Completed && s.SyncedAt < olderThan)
             .ToListAsync();
 
-        _context.SyncRecords.RemoveRange(oldRecords);
-        await _context.SaveChangesAsync();
+        context.SyncRecords.RemoveRange(oldRecords);
+        await context.SaveChangesAsync();
         
         return oldRecords.Count;
     }
@@ -394,7 +413,8 @@ public class SqliteDataService : IDataService
 
     public async Task<IEnumerable<StaffMember>> GetActiveStaffMembersAsync()
     {
-        return await _context.StaffMembers
+        using var context = _contextFactory.CreateDbContext();
+        return await context.StaffMembers
             .Where(s => s.IsActive)
             .OrderBy(s => s.Name)
             .ToListAsync();
@@ -404,13 +424,15 @@ public class SqliteDataService : IDataService
     {
         if (string.IsNullOrWhiteSpace(pin)) return null;
 
-        return await _context.StaffMembers
+        using var context = _contextFactory.CreateDbContext();
+        return await context.StaffMembers
             .FirstOrDefaultAsync(s => s.Pin == pin && s.IsActive);
     }
 
     public async Task<int> GetStaffCountAsync()
     {
-        return await _context.StaffMembers
+        using var context = _contextFactory.CreateDbContext();
+        return await context.StaffMembers
             .Where(s => s.IsActive)
             .CountAsync();
     }
@@ -419,11 +441,12 @@ public class SqliteDataService : IDataService
     {
         try
         {
+            using var context = _contextFactory.CreateDbContext();
             staff.CreatedAt = DateTime.UtcNow;
             staff.UpdatedAt = DateTime.UtcNow;
 
-            await _context.StaffMembers.AddAsync(staff);
-            await _context.SaveChangesAsync();
+            await context.StaffMembers.AddAsync(staff);
+            await context.SaveChangesAsync();
             return true;
         }
         catch
@@ -436,7 +459,8 @@ public class SqliteDataService : IDataService
     {
         try
         {
-            var existing = await _context.StaffMembers.FindAsync(staff.Id);
+            using var context = _contextFactory.CreateDbContext();
+            var existing = await context.StaffMembers.FindAsync(staff.Id);
             if (existing == null) return false;
 
             existing.Name = staff.Name;
@@ -455,7 +479,7 @@ public class SqliteDataService : IDataService
             existing.LastLoginAt = staff.LastLoginAt;
             existing.UpdatedAt = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
             return true;
         }
         catch
@@ -468,13 +492,14 @@ public class SqliteDataService : IDataService
     {
         try
         {
-            var staff = await _context.StaffMembers.FindAsync(id);
+            using var context = _contextFactory.CreateDbContext();
+            var staff = await context.StaffMembers.FindAsync(id);
             if (staff == null) return false;
 
             staff.IsActive = false;
             staff.UpdatedAt = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
             return true;
         }
         catch
@@ -489,22 +514,18 @@ public class SqliteDataService : IDataService
 
     public async Task InitializeDatabaseAsync()
     {
-        await _context.Database.EnsureCreatedAsync();
-        await MigrateSchemaAsync();
+        using var context = _contextFactory.CreateDbContext();
+        await context.Database.EnsureCreatedAsync();
+        await MigrateSchemaAsync(context);
     }
 
-    /// <summary>
-    /// Applies schema migrations for new columns added after initial release.
-    /// SQLite doesn't support full ALTER TABLE, so we check if columns exist first.
-    /// </summary>
-    private async Task MigrateSchemaAsync()
+    private async Task MigrateSchemaAsync(AppDbContext context)
     {
         try
         {
-            var connection = _context.Database.GetDbConnection();
+            var connection = context.Database.GetDbConnection();
             await connection.OpenAsync();
             
-            // Get existing columns
             using var command = connection.CreateCommand();
             command.CommandText = "PRAGMA table_info(Transactions)";
             
@@ -517,7 +538,6 @@ public class SqliteDataService : IDataService
                 }
             }
             
-            // Add PaymentReference column if missing
             if (!existingColumns.Contains("PaymentReference"))
             {
                 Debug.WriteLine("[Migration] Adding PaymentReference column...");
@@ -526,7 +546,6 @@ public class SqliteDataService : IDataService
                 await alterCommand.ExecuteNonQueryAsync();
             }
             
-            // Add CustomerPhone column if missing
             if (!existingColumns.Contains("CustomerPhone"))
             {
                 Debug.WriteLine("[Migration] Adding CustomerPhone column...");
@@ -540,7 +559,6 @@ public class SqliteDataService : IDataService
         catch (Exception ex)
         {
             Debug.WriteLine($"[Migration] Schema migration warning: {ex.Message}");
-            // Non-fatal - continue with app startup
         }
     }
 
