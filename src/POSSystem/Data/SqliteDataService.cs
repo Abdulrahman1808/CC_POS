@@ -493,6 +493,27 @@ public class SqliteDataService : IDataService
         await MigrateSchemaAsync();
     }
 
+    public async Task<bool> ClearAllDataAsync()
+    {
+        try
+        {
+            // Clear all data using raw SQL for efficiency and to bypass cascade issues
+            await _context.Database.ExecuteSqlRawAsync("DELETE FROM TransactionItems");
+            await _context.Database.ExecuteSqlRawAsync("DELETE FROM Transactions");
+            await _context.Database.ExecuteSqlRawAsync("DELETE FROM SyncRecords");
+            
+            // Note: We don't delete Products or Staff members here as they are part of the setup
+            
+            await _context.SaveChangesAsync();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[SqliteDataService] ClearAllData ERROR: {ex.Message}");
+            return false;
+        }
+    }
+
     /// <summary>
     /// Applies schema migrations for new columns added after initial release.
     /// SQLite doesn't support full ALTER TABLE, so we check if columns exist first.

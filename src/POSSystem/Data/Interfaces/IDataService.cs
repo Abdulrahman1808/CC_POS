@@ -169,5 +169,10 @@ public interface IDataService
     /// </summary>
     Task InitializeDatabaseAsync();
 
+    /// <summary>
+    /// Deletes all transactions, sync records, and resets data.
+    /// </summary>
+    Task<bool> ClearAllDataAsync();
+
     #endregion
 }

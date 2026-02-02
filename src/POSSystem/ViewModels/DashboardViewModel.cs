@@ -584,13 +584,13 @@ public partial class DashboardViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Clears all test data (transactions and products).
+    /// Clears all test data (transactions and sync records).
     /// </summary>
     [RelayCommand]
     private async Task ClearTestDataAsync()
     {
         var result = System.Windows.MessageBox.Show(
-            "This will delete ALL transactions and reset to seed data.\n\nAre you sure?",
+            "This will delete ALL transactions and sync records.\n\nAre you sure?",
             "Clear Test Data",
             System.Windows.MessageBoxButton.YesNo,
             System.Windows.MessageBoxImage.Warning);
@@ -598,9 +598,58 @@ public partial class DashboardViewModel : ObservableObject
         if (result == System.Windows.MessageBoxResult.Yes)
         {
             Debug.WriteLine("[DevMode] Clearing test data...");
-            // TODO: Implement data reset
-            await RefreshDataAsync();
-            Debug.WriteLine("[DevMode] Test data cleared");
+            
+            IsProcessing = true;
+            try
+            {
+                var success = await _dataService.ClearAllDataAsync();
+                if (success)
+                {
+                    // Update daily sales and transaction count locally
+                    DailySales = 0;
+                    TransactionCount = 0;
+                    PendingSyncCount = 0;
+                    
+                    await RefreshDataAsync();
+                    
+                    // Send notification (Implementation in next step)
+                    try 
+                    {
+                        var emailService = App.Current.Services.GetService<EmailService>();
+                        if (emailService != null)
+                        {
+                            await emailService.SendTransactionClearNotificationAsync(
+                                "Developer Mode / Admin", 
+                                0, // Count already cleared 
+                                0);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[DevMode] Email notification failed: {ex.Message}");
+                    }
+
+                    System.Windows.MessageBox.Show(
+                        "All test data has been cleared successfully.",
+                        "Success",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Information);
+                }
+                else
+                {
+                    System.Windows.MessageBox.Show(
+                        "Failed to clear data. Check logs for details.",
+                        "Error",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Error);
+                }
+            }
+            finally
+            {
+                IsProcessing = false;
+            }
+            
+            Debug.WriteLine("[DevMode] Test data clear operation finished");
         }
     }
 

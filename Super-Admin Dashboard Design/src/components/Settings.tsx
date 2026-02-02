@@ -1,47 +1,52 @@
 import React, { useState } from 'react';
-import { 
-  Shield, 
-  Bell, 
-  Database, 
-  Mail, 
-  CreditCard, 
+import {
+  Shield,
+  Bell,
+  Database,
+  Mail,
+  CreditCard,
   Key,
   CheckCircle2,
   AlertCircle,
   Save,
-  RefreshCw
+  RefreshCw,
+  DollarSign
 } from 'lucide-react';
 import { Button } from './Button';
 import { Input } from './Input';
 import { Tag } from './Tag';
+import { useI18n } from '../utils/I18nContext';
 
 export function Settings() {
+  const { language, setLanguage, t } = useI18n();
   const [activeTab, setActiveTab] = useState('general');
   const [saving, setSaving] = useState(false);
+  const [connectingStripe, setConnectingStripe] = useState(false);
+  const [stripeConnected, setStripeConnected] = useState(false);
+
   const [settings, setSettings] = useState({
     // General Settings
     platformName: 'Eagle POS',
     supportEmail: 'support@eaglepos.com',
-    defaultLanguage: 'en',
     timezone: 'Africa/Cairo',
-    
+
     // Security Settings
     sessionTimeout: '30',
     twoFactorEnabled: false,
     passwordExpiry: '90',
-    
+
     // Email Notifications
     emailOnNewTenant: true,
     emailOnPaymentFailed: true,
     emailOnHighValue: true,
     dailyDigest: true,
-    
+
     // Database Settings
     autoBackup: true,
     backupFrequency: 'daily',
     retentionDays: '30'
   });
-  
+
   const handleSave = async () => {
     setSaving(true);
     // Simulate save
@@ -49,26 +54,33 @@ export function Settings() {
     setSaving(false);
     console.log('Settings saved:', settings);
   };
-  
+
+  const handleConnectStripe = async () => {
+    setConnectingStripe(true);
+    // Simulate Stripe OAuth flow
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    setConnectingStripe(false);
+    setStripeConnected(true);
+  };
+
   const handleDatabaseBackup = () => {
     console.log('Triggering manual backup...');
-    // In production, trigger Supabase backup
   };
-  
+
   const tabs = [
-    { id: 'general', label: 'General', icon: <Shield size={18} /> },
-    { id: 'security', label: 'Security', icon: <Key size={18} /> },
-    { id: 'notifications', label: 'Notifications', icon: <Bell size={18} /> },
-    { id: 'billing', label: 'Billing', icon: <CreditCard size={18} /> },
-    { id: 'database', label: 'Database', icon: <Database size={18} /> }
+    { id: 'general', label: t('general'), icon: <Shield size={18} /> },
+    { id: 'security', label: t('security'), icon: <Key size={18} /> },
+    { id: 'notifications', label: t('notifications'), icon: <Bell size={18} /> },
+    { id: 'billing', label: t('billing'), icon: <CreditCard size={18} /> },
+    { id: 'database', label: t('database'), icon: <Database size={18} /> }
   ];
-  
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-foreground mb-1">Platform Settings</h1>
+          <h1 className="text-foreground mb-1">{t('platform_settings')}</h1>
           <p className="text-muted-foreground">Manage your Eagle POS super-admin configuration</p>
         </div>
         <Button onClick={handleSave} disabled={saving}>
@@ -80,12 +92,12 @@ export function Settings() {
           ) : (
             <>
               <Save size={18} className="mr-2" />
-              Save Changes
+              {t('save_changes')}
             </>
           )}
         </Button>
       </div>
-      
+
       {/* Tabs */}
       <div className="border-b border-border">
         <div className="flex gap-6 overflow-x-auto">
@@ -93,11 +105,10 @@ export function Settings() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors whitespace-nowrap ${
-                activeTab === tab.id
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
+              className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.id
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
             >
               {tab.icon}
               {tab.label}
@@ -105,41 +116,40 @@ export function Settings() {
           ))}
         </div>
       </div>
-      
+
       {/* Tab Content */}
       <div className="bg-card border border-border rounded-lg p-6">
         {/* General Settings */}
         {activeTab === 'general' && (
           <div className="space-y-6">
             <div>
-              <h3 className="text-card-foreground mb-4">General Settings</h3>
+              <h3 className="text-card-foreground mb-4">{t('general')}</h3>
               <div className="space-y-4">
                 <Input
                   label="Platform Name"
                   value={settings.platformName}
                   onChange={(e) => setSettings({ ...settings, platformName: e.target.value })}
                 />
-                
+
                 <Input
                   label="Support Email"
                   type="email"
                   value={settings.supportEmail}
                   onChange={(e) => setSettings({ ...settings, supportEmail: e.target.value })}
                 />
-                
+
                 <div>
-                  <label className="text-foreground mb-2 block">Default Language</label>
+                  <label className="text-foreground mb-2 block">{t('language')}</label>
                   <select
-                    value={settings.defaultLanguage}
-                    onChange={(e) => setSettings({ ...settings, defaultLanguage: e.target.value })}
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value as any)}
                     className="w-full bg-input border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   >
-                    <option value="en">English</option>
-                    <option value="ar">Arabic (العربية)</option>
-                    <option value="fr">French (Français)</option>
+                    <option value="en">{t('english')}</option>
+                    <option value="ar">{t('arabic')}</option>
                   </select>
                 </div>
-                
+
                 <div>
                   <label className="text-foreground mb-2 block">Timezone</label>
                   <select
@@ -157,7 +167,7 @@ export function Settings() {
             </div>
           </div>
         )}
-        
+
         {/* Security Settings */}
         {activeTab === 'security' && (
           <div className="space-y-6">
@@ -173,7 +183,7 @@ export function Settings() {
                     </p>
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="text-foreground mb-2 block">Session Timeout (minutes)</label>
                   <input
@@ -188,7 +198,7 @@ export function Settings() {
                     Users will be automatically logged out after this period of inactivity
                   </p>
                 </div>
-                
+
                 <div className="flex items-center justify-between p-4 bg-accent/30 rounded-lg">
                   <div>
                     <div className="text-card-foreground mb-1">Two-Factor Authentication</div>
@@ -204,7 +214,7 @@ export function Settings() {
                     <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                   </label>
                 </div>
-                
+
                 <div>
                   <label className="text-foreground mb-2 block">Password Expiry (days)</label>
                   <input
@@ -223,7 +233,7 @@ export function Settings() {
             </div>
           </div>
         )}
-        
+
         {/* Notification Settings */}
         {activeTab === 'notifications' && (
           <div className="space-y-6">
@@ -232,7 +242,7 @@ export function Settings() {
               <p className="text-sm text-muted-foreground mb-6">
                 Configure which events trigger email notifications to super-admins
               </p>
-              
+
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 bg-accent/30 rounded-lg">
                   <div className="flex items-center gap-3">
@@ -252,7 +262,7 @@ export function Settings() {
                     <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                   </label>
                 </div>
-                
+
                 <div className="flex items-center justify-between p-4 bg-accent/30 rounded-lg">
                   <div className="flex items-center gap-3">
                     <AlertCircle className="text-destructive" size={20} />
@@ -271,7 +281,7 @@ export function Settings() {
                     <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                   </label>
                 </div>
-                
+
                 <div className="flex items-center justify-between p-4 bg-accent/30 rounded-lg">
                   <div className="flex items-center gap-3">
                     <DollarSign className="text-success" size={20} />
@@ -290,7 +300,7 @@ export function Settings() {
                     <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                   </label>
                 </div>
-                
+
                 <div className="flex items-center justify-between p-4 bg-accent/30 rounded-lg">
                   <div className="flex items-center gap-3">
                     <Bell className="text-primary" size={20} />
@@ -313,13 +323,37 @@ export function Settings() {
             </div>
           </div>
         )}
-        
+
         {/* Billing Settings */}
         {activeTab === 'billing' && (
           <div className="space-y-6">
             <div>
-              <h3 className="text-card-foreground mb-4">Billing & Subscription Plans</h3>
-              
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-card-foreground">{t('billing')} & Subscription Plans</h3>
+                <Button
+                  onClick={handleConnectStripe}
+                  variant={stripeConnected ? 'secondary' : 'primary'}
+                  disabled={connectingStripe}
+                >
+                  {connectingStripe ? (
+                    <>
+                      <RefreshCw size={18} className="mr-2 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : stripeConnected ? (
+                    <>
+                      <CheckCircle2 size={18} className="mr-2 text-success" />
+                      Stripe Connected
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard size={18} className="mr-2" />
+                      {t('connect_stripe')}
+                    </>
+                  )}
+                </Button>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div className="bg-accent/30 border border-border rounded-lg p-6">
                   <div className="text-muted-foreground mb-2">Basic Plan</div>
@@ -340,7 +374,7 @@ export function Settings() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="bg-primary/10 border-2 border-primary rounded-lg p-6 relative">
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <Tag variant="success">Most Popular</Tag>
@@ -363,7 +397,7 @@ export function Settings() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="bg-accent/30 border border-border rounded-lg p-6">
                   <div className="text-muted-foreground mb-2">Enterprise</div>
                   <div className="text-2xl text-card-foreground mb-1">EGP 25,000</div>
@@ -384,7 +418,7 @@ export function Settings() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="bg-success/10 border border-success/30 rounded-lg p-4 flex items-start gap-3">
                 <CheckCircle2 className="text-success flex-shrink-0 mt-0.5" size={20} />
                 <div>
@@ -397,13 +431,13 @@ export function Settings() {
             </div>
           </div>
         )}
-        
+
         {/* Database Settings */}
         {activeTab === 'database' && (
           <div className="space-y-6">
             <div>
               <h3 className="text-card-foreground mb-4">Database Management</h3>
-              
+
               <div className="bg-accent/30 border border-border rounded-lg p-6 mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
@@ -412,7 +446,7 @@ export function Settings() {
                   </div>
                   <Tag variant="success">Healthy</Tag>
                 </div>
-                
+
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                   <div>
                     <div className="text-2xl text-primary mb-1">1,420</div>
@@ -432,7 +466,7 @@ export function Settings() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 bg-accent/30 rounded-lg">
                   <div>
@@ -449,7 +483,7 @@ export function Settings() {
                     <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                   </label>
                 </div>
-                
+
                 {settings.autoBackup && (
                   <>
                     <div>
@@ -464,7 +498,7 @@ export function Settings() {
                         <option value="weekly">Weekly (Sunday)</option>
                       </select>
                     </div>
-                    
+
                     <div>
                       <label className="text-foreground mb-2 block">Retention Period (days)</label>
                       <input
@@ -481,7 +515,7 @@ export function Settings() {
                     </div>
                   </>
                 )}
-                
+
                 <div className="pt-4">
                   <Button onClick={handleDatabaseBackup} variant="secondary" className="w-full">
                     <Database size={18} className="mr-2" />
