@@ -19,7 +19,7 @@ public class LicenseManager : ILicenseManager
     private const string LicenseFileName = ".license";
     
     // Developer mode uses a fixed BusinessId for testing
-    private static readonly Guid DeveloperBusinessId = new("DEV00000-0000-0000-0000-000000000001");
+    private static readonly Guid DeveloperBusinessId = new("de000000-0000-0000-0000-000000000001");
     
     private readonly IHardwareIdService _hardwareIdService;
     private readonly ITenantContext _tenantContext;
