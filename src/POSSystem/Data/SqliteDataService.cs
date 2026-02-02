@@ -523,14 +523,15 @@ public class SqliteDataService : IDataService
     {
         try
         {
+            using var context = _contextFactory.CreateDbContext();
             // Clear all data using raw SQL for efficiency and to bypass cascade issues
-            await _context.Database.ExecuteSqlRawAsync("DELETE FROM TransactionItems");
-            await _context.Database.ExecuteSqlRawAsync("DELETE FROM Transactions");
-            await _context.Database.ExecuteSqlRawAsync("DELETE FROM SyncRecords");
+            await context.Database.ExecuteSqlRawAsync("DELETE FROM TransactionItems");
+            await context.Database.ExecuteSqlRawAsync("DELETE FROM Transactions");
+            await context.Database.ExecuteSqlRawAsync("DELETE FROM SyncRecords");
             
             // Note: We don't delete Products or Staff members here as they are part of the setup
             
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
             return true;
         }
         catch (Exception ex)
@@ -544,7 +545,7 @@ public class SqliteDataService : IDataService
     /// Applies schema migrations for new columns added after initial release.
     /// SQLite doesn't support full ALTER TABLE, so we check if columns exist first.
     /// </summary>
-    private async Task MigrateSchemaAsync()
+    private async Task MigrateSchemaAsync(AppDbContext context)
     {
         try
         {

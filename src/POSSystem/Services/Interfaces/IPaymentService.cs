@@ -51,4 +51,3 @@ public class PaymentResult
     public static PaymentResult Failed(string errorMessage) 
         => new() { Success = false, ErrorMessage = errorMessage };
 }
-}
