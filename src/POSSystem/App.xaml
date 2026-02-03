@@ -22,6 +22,9 @@
             <converters:StringMatchConverter x:Key="StringMatchConverter"/>
             <converters:InitialsConverter x:Key="InitialsConverter"/>
             <converters:PinDotConverter x:Key="PinDotConverter"/>
+            <converters:NullToCollapsedConverter x:Key="NullToCollapsed"/>
+            <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility"/>
         </ResourceDictionary>
+
     </Application.Resources>
 </Application>

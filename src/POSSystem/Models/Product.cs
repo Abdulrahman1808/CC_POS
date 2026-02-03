@@ -77,11 +77,18 @@ public class Product
     public Guid? BusinessId { get; set; }
     
     /// <summary>
+    /// Links product to specific branch for multi-branch isolation.
+    /// Null means product is shared across all branches.
+    /// </summary>
+    public Guid? BranchId { get; set; }
+    
+    /// <summary>
     /// Tracks who last updated this record for conflict resolution.
     /// </summary>
     public UpdateSource LastUpdatedBy { get; set; } = UpdateSource.Desktop;
     
     #endregion
+
     
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     

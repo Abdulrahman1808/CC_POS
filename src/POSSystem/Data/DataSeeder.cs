@@ -16,36 +16,16 @@ public static class DataSeeder
 {
     /// <summary>
     /// Seeds sample products if the database is completely empty (no products at all, including deleted).
+    /// DISABLED: No mock data - production clean start.
     /// </summary>
     public static async Task SeedIfEmptyAsync(IDataService dataService, AppDbContext context)
     {
-#if DEBUG
-        try
-        {
-            // Check for ANY products including deleted ones - prevents re-seeding after deletion
-            var hasAnyProducts = await context.Products.AnyAsync();
-            if (hasAnyProducts)
-            {
-                Debug.WriteLine("[Seeder] Database has products (including deleted), skipping seed.");
-                return;
-            }
-
-            Debug.WriteLine("[Seeder] Database is completely empty, seeding sample products...");
-
-            var products = GetSampleProducts();
-            foreach (var product in products)
-            {
-                await dataService.AddProductAsync(product);
-                Debug.WriteLine($"[Seeder] Added: {product.Name} (${product.Price})");
-            }
-
-            Debug.WriteLine($"[Seeder] ✓ Seeded {products.Count} products successfully!");
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[Seeder] Error: {ex.Message}");
-        }
-#endif
+        // Seeding disabled - users should add their own products
+        Debug.WriteLine("[Seeder] Data seeding is disabled - clean production start.");
+        await Task.CompletedTask;
+        return;
+        
+        // Original DEBUG-only seeding code removed
     }
 
     private static List<Product> GetSampleProducts()

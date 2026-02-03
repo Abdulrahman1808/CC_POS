@@ -78,6 +78,9 @@ public partial class App : Application
             ConfigureServices(services);
             _serviceProvider = services.BuildServiceProvider();
             Debug.WriteLine("[App] Services configured.");
+            
+            // Validate persisted branch context on startup
+            ValidateBranchContextOnStartup();
 
             // Show main window FIRST (responsive UI)
             Debug.WriteLine("[App] Showing main window...");
@@ -87,6 +90,7 @@ public partial class App : Application
             // Initialize database in background (non-blocking)
             Debug.WriteLine("[App] Starting async database initialization...");
             _ = InitializeDatabaseInBackgroundAsync();
+
         }
         catch (Exception ex)
         {
@@ -118,6 +122,49 @@ public partial class App : Application
                 MessageBox.Show($"Database initialization error:\n{ex.Message}", 
                     "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
             });
+        }
+    }
+    
+    /// <summary>
+    /// Validates that persisted branch context was loaded correctly on startup.
+    /// This ensures hardware-locked machines automatically load their branch binding.
+    /// </summary>
+    private void ValidateBranchContextOnStartup()
+    {
+        try
+        {
+            var tenantContext = _serviceProvider.GetService<ITenantContext>();
+            if (tenantContext == null)
+            {
+                Debug.WriteLine("[App] ⚠️ TenantContext not available");
+                return;
+            }
+            
+            // Log current tenant state
+            Debug.WriteLine($"[App] Tenant Context Status:");
+            Debug.WriteLine($"  - IsContextValid: {tenantContext.IsContextValid}");
+            Debug.WriteLine($"  - BusinessId: {tenantContext.CurrentBusinessId}");
+            Debug.WriteLine($"  - IsBranchSelected: {tenantContext.IsBranchSelected}");
+            Debug.WriteLine($"  - BranchId: {tenantContext.CurrentBranchId}");
+            Debug.WriteLine($"  - BranchName: {tenantContext.CurrentBranchName}");
+            Debug.WriteLine($"  - IsFullyConfigured: {tenantContext.IsFullyConfigured}");
+            
+            if (tenantContext.IsFullyConfigured)
+            {
+                Debug.WriteLine($"[App] ✅ Hardware locked to branch: {tenantContext.CurrentBranchName}");
+            }
+            else if (tenantContext.IsContextValid)
+            {
+                Debug.WriteLine("[App] ⚠️ Business context set but no branch selected (will prompt on license check)");
+            }
+            else
+            {
+                Debug.WriteLine("[App] ℹ️ No tenant context - fresh installation or cleared license");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[App] Error validating branch context: {ex.Message}");
         }
     }
 

@@ -101,10 +101,14 @@ public class SqliteDataService : IDataService
             product.CreatedAt = DateTime.UtcNow;
             product.UpdatedAt = DateTime.UtcNow;
             
-            // Auto-populate BusinessId for multi-tenant isolation
+            // Auto-populate BusinessId and BranchId for multi-tenant isolation
             if (_tenantContext.IsContextValid && product.BusinessId == null)
             {
                 product.BusinessId = _tenantContext.CurrentBusinessId;
+            }
+            if (_tenantContext.IsBranchSelected && product.BranchId == null)
+            {
+                product.BranchId = _tenantContext.CurrentBranchId;
             }
             
             await context.Products.AddAsync(product);
@@ -255,13 +259,18 @@ public class SqliteDataService : IDataService
             transaction.CreatedAt = DateTime.UtcNow;
             transaction.CalculateTotals();
             
-            // Auto-populate BusinessId for multi-tenant isolation
+            // Auto-populate BusinessId and BranchId for multi-tenant isolation
             if (_tenantContext.IsContextValid && transaction.BusinessId == null)
             {
                 transaction.BusinessId = _tenantContext.CurrentBusinessId;
             }
+            if (_tenantContext.IsBranchSelected && transaction.BranchId == null)
+            {
+                transaction.BranchId = _tenantContext.CurrentBranchId;
+            }
             
-            Debug.WriteLine($"[CreateTransaction] Total: {transaction.Total}, Number: {transaction.TransactionNumber}, BusinessId: {transaction.BusinessId}");
+            Debug.WriteLine($"[CreateTransaction] Total: {transaction.Total}, Number: {transaction.TransactionNumber}, BusinessId: {transaction.BusinessId}, BranchId: {transaction.BranchId}");
+
 
             await context.Transactions.AddAsync(transaction);
             await context.SaveChangesAsync();

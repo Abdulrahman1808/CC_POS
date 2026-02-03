@@ -57,7 +57,18 @@ public class ReceiptModel
     /// </summary>
     public string ReceiptFooter { get; set; } = "Thank you for your purchase!";
     
+    /// <summary>
+    /// Branch ID for multi-branch businesses.
+    /// </summary>
+    public Guid? BranchId { get; set; }
+    
+    /// <summary>
+    /// Branch name for display on receipts.
+    /// </summary>
+    public string? BranchName { get; set; }
+    
     #endregion
+
 
     #region Transaction Information
     

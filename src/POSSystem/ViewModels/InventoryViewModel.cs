@@ -1,17 +1,21 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Win32;
 using POSSystem.Data.Interfaces;
 using POSSystem.Models;
 using POSSystem.Services.Interfaces;
 
 namespace POSSystem.ViewModels;
+
 
 /// <summary>
 /// ViewModel for Inventory Management with product CRUD operations.
@@ -182,6 +186,175 @@ public partial class InventoryViewModel : ObservableObject
         _editingProductId = null;
         ClearDialogFields();
         ShowProductDialog = true;
+    }
+
+    [RelayCommand]
+    private async Task ImportCsvAsync()
+    {
+        try
+        {
+            var dialog = new OpenFileDialog
+            {
+                Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*",
+                Title = "Select CSV File to Import"
+            };
+
+            if (dialog.ShowDialog() != true) return;
+
+            IsLoading = true;
+            var imported = 0;
+            var skipped = 0;
+            var lines = await File.ReadAllLinesAsync(dialog.FileName);
+
+            // Skip header row if exists
+            var startIndex = lines.Length > 0 && lines[0].ToLower().Contains("name") ? 1 : 0;
+
+            for (int i = startIndex; i < lines.Length; i++)
+            {
+                var line = lines[i];
+                if (string.IsNullOrWhiteSpace(line)) continue;
+
+                var product = ParseCsvLine(line);
+                if (product != null)
+                {
+                    await _dataService.AddProductAsync(product);
+                    imported++;
+                }
+                else
+                {
+                    skipped++;
+                }
+            }
+
+            await LoadProductsAsync();
+            await LoadCategoriesAsync();
+            
+            MessageBox.Show($"Import complete!\n\nImported: {imported} products\nSkipped: {skipped} rows", 
+                "CSV Import", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Import] CSV Error: {ex.Message}");
+            MessageBox.Show($"Error importing CSV:\n{ex.Message}", "Import Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ImportExcelAsync()
+    {
+        try
+        {
+            var dialog = new OpenFileDialog
+            {
+                Filter = "Excel Files (*.xlsx;*.xls)|*.xlsx;*.xls|CSV Files (*.csv)|*.csv|All Files (*.*)|*.*",
+                Title = "Select Excel/CSV File to Import"
+            };
+
+            if (dialog.ShowDialog() != true) return;
+
+            // For Excel files, convert to CSV first using minimal parsing
+            // Note: Full Excel support requires EPPlus or ClosedXML NuGet package
+            var extension = Path.GetExtension(dialog.FileName).ToLower();
+            
+            if (extension == ".csv")
+            {
+                // Redirect to CSV import
+                await ImportCsvAsync();
+                return;
+            }
+            
+            // Basic Excel import message for now
+            MessageBox.Show(
+                "For Excel (.xlsx/.xls) files, please save them as CSV first:\n\n" +
+                "1. Open your Excel file\n" +
+                "2. File → Save As\n" +
+                "3. Choose 'CSV (Comma delimited) (*.csv)'\n" +
+                "4. Use the 'Import CSV' button\n\n" +
+                "Expected CSV columns:\n" +
+                "Name, Price, Cost, Category, SKU, Barcode, Stock, TaxRate",
+                "Excel Import", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Import] Excel Error: {ex.Message}");
+            MessageBox.Show($"Error: {ex.Message}", "Import Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private Product? ParseCsvLine(string line)
+    {
+        try
+        {
+            // Handle quoted fields and commas within quotes
+            var fields = ParseCsvFields(line);
+            if (fields.Count < 1 || string.IsNullOrWhiteSpace(fields[0])) return null;
+
+            var product = new Product
+            {
+                Id = Guid.NewGuid(),
+                Name = fields[0].Trim(),
+                Price = fields.Count > 1 ? ParseDecimal(fields[1]) : 0m,
+                Cost = fields.Count > 2 ? ParseDecimal(fields[2]) : 0m,
+                Category = fields.Count > 3 ? fields[3].Trim() : "Uncategorized",
+                Sku = fields.Count > 4 ? fields[4].Trim() : "",
+                Barcode = fields.Count > 5 ? fields[5].Trim() : "",
+                StockQuantity = fields.Count > 6 ? ParseInt(fields[6]) : 0,
+                TaxRate = fields.Count > 7 ? ParseDecimal(fields[7]) : 0.14m,
+                IsActive = true
+            };
+
+            return product;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Import] Parse error: {ex.Message} - Line: {line}");
+            return null;
+        }
+    }
+
+    private List<string> ParseCsvFields(string line)
+    {
+        var fields = new List<string>();
+        var inQuotes = false;
+        var field = "";
+
+        for (int i = 0; i < line.Length; i++)
+        {
+            char c = line[i];
+            if (c == '"')
+            {
+                inQuotes = !inQuotes;
+            }
+            else if (c == ',' && !inQuotes)
+            {
+                fields.Add(field);
+                field = "";
+            }
+            else
+            {
+                field += c;
+            }
+        }
+        fields.Add(field);
+        return fields;
+    }
+
+    private decimal ParseDecimal(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return 0m;
+        value = value.Trim().Replace("$", "").Replace("£", "").Replace("€", "").Replace("%", "");
+        return decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var result) ? result : 0m;
+    }
+
+    private int ParseInt(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return 0;
+        value = value.Trim();
+        return int.TryParse(value, out var result) ? result : 0;
     }
 
     [RelayCommand]
