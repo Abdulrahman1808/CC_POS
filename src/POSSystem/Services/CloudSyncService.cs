@@ -80,12 +80,13 @@ public class CloudSyncService : ISyncService, IDisposable
     }
     
     /// <summary>
-    /// Adds the X-Business-Id header for multi-tenant RLS before each request.
+    /// Adds the X-Business-Id and X-Branch-Id headers for multi-tenant RLS before each request.
     /// </summary>
-    private void EnsureBusinessIdHeader()
+    private void EnsureTenantHeaders()
     {
-        // Remove existing header if present
+        // Remove existing headers if present
         _httpClient.DefaultRequestHeaders.Remove("X-Business-Id");
+        _httpClient.DefaultRequestHeaders.Remove("X-Branch-Id");
         
         if (_tenantContext.IsContextValid && _tenantContext.CurrentBusinessId.HasValue)
         {
@@ -96,7 +97,24 @@ public class CloudSyncService : ISyncService, IDisposable
         {
             Debug.WriteLine("[CloudSync] ⚠️ No valid BusinessId - sync will fail RLS policies");
         }
+        
+        // Add branch header for multi-branch isolation
+        if (_tenantContext.IsBranchSelected && _tenantContext.CurrentBranchId.HasValue)
+        {
+            _httpClient.DefaultRequestHeaders.Add("X-Branch-Id", _tenantContext.CurrentBranchId.Value.ToString());
+            Debug.WriteLine($"[CloudSync] X-Branch-Id header set: {_tenantContext.CurrentBranchId.Value}");
+        }
+        else
+        {
+            Debug.WriteLine("[CloudSync] ⚠️ No BranchId set - branch-level sync disabled");
+        }
     }
+    
+    /// <summary>
+    /// Legacy method name - calls EnsureTenantHeaders for compatibility.
+    /// </summary>
+    private void EnsureBusinessIdHeader() => EnsureTenantHeaders();
+
 
 
     private bool IsConfigured => !string.IsNullOrEmpty(_supabaseUrl) && 

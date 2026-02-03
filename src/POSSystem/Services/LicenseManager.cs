@@ -61,6 +61,15 @@ public class LicenseManager : ILicenseManager
     public Guid? BusinessId => _tenantContext.CurrentBusinessId;
     
     /// <inheritdoc />
+    public Guid? BranchId => _tenantContext.CurrentBranchId;
+    
+    /// <inheritdoc />
+    public bool IsBranchBound => _tenantContext.IsBranchSelected;
+    
+    /// <inheritdoc />
+    public bool RequiresBranchSelection => _status == LicenseStatus.Valid && !_tenantContext.IsBranchSelected;
+    
+    /// <inheritdoc />
     public async Task<bool> ActivateLicenseAsync(string licenseKey)
     {
         if (string.IsNullOrWhiteSpace(licenseKey))
@@ -298,5 +307,51 @@ public class LicenseManager : ILicenseManager
         }
         
         return null;
+    }
+    
+    /// <inheritdoc />
+    public async Task<bool> BindToBranchAsync(Guid branchId, string branchName)
+    {
+        if (branchId == Guid.Empty)
+            return false;
+            
+        if (string.IsNullOrWhiteSpace(branchName))
+            return false;
+            
+        try
+        {
+            // Validate we have a valid license first
+            if (_status != LicenseStatus.Valid && _status != LicenseStatus.Developer)
+            {
+                Debug.WriteLine("[LicenseManager] Cannot bind branch - no valid license");
+                return false;
+            }
+            
+            // Check if already bound to a different branch
+            if (_tenantContext.IsBranchSelected && _tenantContext.CurrentBranchId != branchId)
+            {
+                Debug.WriteLine($"[LicenseManager] ⚠️ Machine already bound to branch {_tenantContext.CurrentBranchId}");
+                return false;
+            }
+            
+            // Set branch context (this persists with DPAPI encryption)
+            _tenantContext.SetBranchContext(branchId, branchName);
+            
+            Debug.WriteLine($"[LicenseManager] 🔒 Machine bound to branch: {branchName} ({branchId})");
+            Debug.WriteLine($"[LicenseManager] Hardware ID: {MachineId}");
+            
+            // Trigger a save to update the license file metadata
+            if (!string.IsNullOrEmpty(_activeLicenseKey))
+            {
+                await SaveLicenseKeyAsync(_activeLicenseKey);
+            }
+            
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[LicenseManager] Failed to bind branch: {ex.Message}");
+            return false;
+        }
     }
 }

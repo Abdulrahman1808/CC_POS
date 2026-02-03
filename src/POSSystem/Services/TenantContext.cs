@@ -9,14 +9,16 @@ using POSSystem.Services.Interfaces;
 namespace POSSystem.Services;
 
 /// <summary>
-/// Manages tenant (business) context for multi-tenancy.
-/// Persists the BusinessId securely alongside the license key.
+/// Manages tenant (business + branch) context for multi-tenancy.
+/// Persists context securely using DPAPI encryption.
 /// </summary>
 public class TenantContext : ITenantContext
 {
     private const string TenantFileName = ".tenant";
     private readonly string _tenantFilePath;
     private Guid? _currentBusinessId;
+    private Guid? _currentBranchId;
+    private string? _currentBranchName;
     
     public TenantContext()
     {
@@ -33,7 +35,19 @@ public class TenantContext : ITenantContext
     public Guid? CurrentBusinessId => _currentBusinessId;
     
     /// <inheritdoc />
+    public Guid? CurrentBranchId => _currentBranchId;
+    
+    /// <inheritdoc />
+    public string? CurrentBranchName => _currentBranchName;
+    
+    /// <inheritdoc />
     public bool IsContextValid => _currentBusinessId.HasValue && _currentBusinessId != Guid.Empty;
+    
+    /// <inheritdoc />
+    public bool IsBranchSelected => _currentBranchId.HasValue && _currentBranchId != Guid.Empty;
+    
+    /// <inheritdoc />
+    public bool IsFullyConfigured => IsContextValid && IsBranchSelected;
     
     /// <inheritdoc />
     public void SetBusinessContext(Guid businessId)
@@ -48,9 +62,27 @@ public class TenantContext : ITenantContext
     }
     
     /// <inheritdoc />
+    public void SetBranchContext(Guid branchId, string branchName)
+    {
+        if (branchId == Guid.Empty)
+            throw new ArgumentException("BranchId cannot be empty", nameof(branchId));
+        
+        if (string.IsNullOrWhiteSpace(branchName))
+            throw new ArgumentException("BranchName cannot be empty", nameof(branchName));
+        
+        _currentBranchId = branchId;
+        _currentBranchName = branchName;
+        PersistContext();
+        
+        Debug.WriteLine($"[TenantContext] Branch context set: {branchName} ({branchId})");
+    }
+    
+    /// <inheritdoc />
     public void ClearContext()
     {
         _currentBusinessId = null;
+        _currentBranchId = null;
+        _currentBranchName = null;
         
         try
         {
@@ -64,7 +96,17 @@ public class TenantContext : ITenantContext
             Debug.WriteLine($"[TenantContext] Failed to delete tenant file: {ex.Message}");
         }
         
-        Debug.WriteLine("[TenantContext] Business context cleared");
+        Debug.WriteLine("[TenantContext] All context cleared");
+    }
+    
+    /// <inheritdoc />
+    public void ClearBranchContext()
+    {
+        _currentBranchId = null;
+        _currentBranchName = null;
+        PersistContext();
+        
+        Debug.WriteLine("[TenantContext] Branch context cleared (business retained)");
     }
     
     /// <inheritdoc />
@@ -86,7 +128,10 @@ public class TenantContext : ITenantContext
             if (tenantData != null && tenantData.BusinessId != Guid.Empty)
             {
                 _currentBusinessId = tenantData.BusinessId;
-                Debug.WriteLine($"[TenantContext] Loaded persisted context: {_currentBusinessId}");
+                _currentBranchId = tenantData.BranchId != Guid.Empty ? tenantData.BranchId : null;
+                _currentBranchName = tenantData.BranchName;
+                
+                Debug.WriteLine($"[TenantContext] Loaded context - Business: {_currentBusinessId}, Branch: {_currentBranchName} ({_currentBranchId})");
                 return true;
             }
         }
@@ -110,6 +155,8 @@ public class TenantContext : ITenantContext
             var tenantData = new TenantData
             {
                 BusinessId = _currentBusinessId ?? Guid.Empty,
+                BranchId = _currentBranchId ?? Guid.Empty,
+                BranchName = _currentBranchName,
                 PersistedAt = DateTime.UtcNow
             };
             
@@ -149,6 +196,8 @@ public class TenantContext : ITenantContext
     private class TenantData
     {
         public Guid BusinessId { get; set; }
+        public Guid BranchId { get; set; }
+        public string? BranchName { get; set; }
         public DateTime PersistedAt { get; set; }
     }
 }
