@@ -76,6 +76,37 @@ public partial class InventoryViewModel : ObservableObject
     [ObservableProperty]
     private int _dialogMinStock = 5;
 
+    // New inventory dialog fields
+    [ObservableProperty]
+    private string _dialogProductType = string.Empty;
+
+    [ObservableProperty]
+    private string _dialogFlavor = string.Empty;
+
+    [ObservableProperty]
+    private string _dialogWeight = string.Empty;
+
+    [ObservableProperty]
+    private string _dialogLocation = string.Empty;
+
+    [ObservableProperty]
+    private int _dialogRetailQuantity;
+
+    [ObservableProperty]
+    private int _dialogCartonCount;
+
+    [ObservableProperty]
+    private int _dialogUnitsPerCarton;
+
+    [ObservableProperty]
+    private decimal _dialogRetailSalePrice;
+
+    [ObservableProperty]
+    private decimal _dialogWholesaleSalePrice;
+
+    [ObservableProperty]
+    private decimal _dialogWholesaleSupplierPrice;
+
     [ObservableProperty]
     private ObservableCollection<Product> _lowStockProducts = new();
     
@@ -532,6 +563,17 @@ public partial class InventoryViewModel : ObservableObject
         DialogStock = SelectedProduct.StockQuantity;
         DialogTaxRate = SelectedProduct.TaxRate;
         DialogMinStock = SelectedProduct.MinStockLevel;
+        // New fields
+        DialogProductType = SelectedProduct.ProductType ?? "";
+        DialogFlavor = SelectedProduct.Flavor ?? "";
+        DialogWeight = SelectedProduct.Weight ?? "";
+        DialogLocation = SelectedProduct.Location ?? "";
+        DialogRetailQuantity = SelectedProduct.RetailQuantity;
+        DialogCartonCount = SelectedProduct.CartonCount;
+        DialogUnitsPerCarton = SelectedProduct.UnitsPerCarton;
+        DialogRetailSalePrice = SelectedProduct.RetailSalePrice;
+        DialogWholesaleSalePrice = SelectedProduct.WholesaleSalePrice;
+        DialogWholesaleSupplierPrice = SelectedProduct.WholesaleSupplierPrice;
         
         ShowProductDialog = true;
     }
@@ -562,6 +604,17 @@ public partial class InventoryViewModel : ObservableObject
                     product.StockQuantity = DialogStock;
                     product.TaxRate = DialogTaxRate;
                     product.MinStockLevel = DialogMinStock;
+                    // New fields
+                    product.ProductType = string.IsNullOrWhiteSpace(DialogProductType) ? null : DialogProductType;
+                    product.Flavor = string.IsNullOrWhiteSpace(DialogFlavor) ? null : DialogFlavor;
+                    product.Weight = string.IsNullOrWhiteSpace(DialogWeight) ? null : DialogWeight;
+                    product.Location = string.IsNullOrWhiteSpace(DialogLocation) ? null : DialogLocation;
+                    product.RetailQuantity = DialogRetailQuantity;
+                    product.CartonCount = DialogCartonCount;
+                    product.UnitsPerCarton = DialogUnitsPerCarton;
+                    product.RetailSalePrice = DialogRetailSalePrice;
+                    product.WholesaleSalePrice = DialogWholesaleSalePrice;
+                    product.WholesaleSupplierPrice = DialogWholesaleSupplierPrice;
                     product.LastUpdatedBy = UpdateSource.Desktop;
 
                     await _dataService.UpdateProductAsync(product);
@@ -582,6 +635,16 @@ public partial class InventoryViewModel : ObservableObject
                     StockQuantity = DialogStock,
                     TaxRate = DialogTaxRate,
                     MinStockLevel = DialogMinStock,
+                    ProductType = string.IsNullOrWhiteSpace(DialogProductType) ? null : DialogProductType,
+                    Flavor = string.IsNullOrWhiteSpace(DialogFlavor) ? null : DialogFlavor,
+                    Weight = string.IsNullOrWhiteSpace(DialogWeight) ? null : DialogWeight,
+                    Location = string.IsNullOrWhiteSpace(DialogLocation) ? null : DialogLocation,
+                    RetailQuantity = DialogRetailQuantity,
+                    CartonCount = DialogCartonCount,
+                    UnitsPerCarton = DialogUnitsPerCarton,
+                    RetailSalePrice = DialogRetailSalePrice,
+                    WholesaleSalePrice = DialogWholesaleSalePrice,
+                    WholesaleSupplierPrice = DialogWholesaleSupplierPrice,
                     LastUpdatedBy = UpdateSource.Desktop
                 };
 
@@ -668,6 +731,17 @@ public partial class InventoryViewModel : ObservableObject
         DialogStock = 0;
         DialogTaxRate = 0.14m;
         DialogMinStock = 5;
+        // New fields
+        DialogProductType = string.Empty;
+        DialogFlavor = string.Empty;
+        DialogWeight = string.Empty;
+        DialogLocation = string.Empty;
+        DialogRetailQuantity = 0;
+        DialogCartonCount = 0;
+        DialogUnitsPerCarton = 0;
+        DialogRetailSalePrice = 0;
+        DialogWholesaleSalePrice = 0;
+        DialogWholesaleSupplierPrice = 0;
     }
 
     /// <summary>

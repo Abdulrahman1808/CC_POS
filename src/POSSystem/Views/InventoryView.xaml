@@ -288,96 +288,184 @@
                 Background="#80000000"
                 Visibility="{Binding ShowProductDialog, Converter={StaticResource BoolToVisibility}}">
             <Border Background="#1F2937" CornerRadius="16" 
-                    Width="500" VerticalAlignment="Center" HorizontalAlignment="Center"
+                    Width="600" MaxHeight="700" VerticalAlignment="Center" HorizontalAlignment="Center"
                     Padding="30">
-                <StackPanel>
-                    <TextBlock Text="Add/Edit Product" 
-                               FontSize="22" FontWeight="Bold" Foreground="#F9FAFB" Margin="0,0,0,20"/>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
                     
-                    <!-- Name -->
-                    <TextBlock Text="Product Name *" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,5"/>
-                    <TextBox Text="{Binding DialogProductName, UpdateSourceTrigger=PropertyChanged}"
-                             Background="#374151" Foreground="#F9FAFB" FontSize="14"
-                             Padding="12,10" Margin="0,0,0,15"/>
+                    <TextBlock Grid.Row="0" Text="Add/Edit Product / إضافة منتج" 
+                               FontSize="22" FontWeight="Bold" Foreground="#F9FAFB" Margin="0,0,0,15"/>
                     
-                    <!-- Price and Cost Row -->
-                    <Grid Margin="0,0,0,15">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="15"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Text="Price" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,5"/>
-                            <TextBox Text="{Binding DialogPrice, UpdateSourceTrigger=PropertyChanged}"
-                                     Background="#374151" Foreground="#F9FAFB" FontSize="14" Padding="12,10"/>
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,0,15">
+                        <StackPanel>
+                            <!-- Name -->
+                            <TextBlock Text="Product Name / الاسم *" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,5"/>
+                            <TextBox Text="{Binding DialogProductName, UpdateSourceTrigger=PropertyChanged}"
+                                     Background="#374151" Foreground="#F9FAFB" FontSize="14"
+                                     Padding="12,10" Margin="0,0,0,12"/>
+                            
+                            <!-- Category and Type Row -->
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Category / الفئة" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,5"/>
+                                    <TextBox Text="{Binding DialogCategory, UpdateSourceTrigger=PropertyChanged}"
+                                             Background="#374151" Foreground="#F9FAFB" FontSize="14" Padding="12,10"/>
+                                </StackPanel>
+                                
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Type / النوع" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,5"/>
+                                    <TextBox Text="{Binding DialogProductType, UpdateSourceTrigger=PropertyChanged}"
+                                             Background="#374151" Foreground="#F9FAFB" FontSize="14" Padding="12,10"/>
+                                </StackPanel>
+                            </Grid>
+                            
+                            <!-- Flavor and Weight Row -->
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Flavor / النكهة" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,5"/>
+                                    <TextBox Text="{Binding DialogFlavor, UpdateSourceTrigger=PropertyChanged}"
+                                             Background="#374151" Foreground="#F9FAFB" FontSize="14" Padding="12,10"/>
+                                </StackPanel>
+                                
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Weight / الوزن" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,5"/>
+                                    <TextBox Text="{Binding DialogWeight, UpdateSourceTrigger=PropertyChanged}"
+                                             Background="#374151" Foreground="#F9FAFB" FontSize="14" Padding="12,10"/>
+                                </StackPanel>
+                            </Grid>
+                            
+                            <!-- Location and Barcode Row -->
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Location / الموقع" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,5"/>
+                                    <TextBox Text="{Binding DialogLocation, UpdateSourceTrigger=PropertyChanged}"
+                                             Background="#374151" Foreground="#F9FAFB" FontSize="14" Padding="12,10"/>
+                                </StackPanel>
+                                
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Barcode / الباركود" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,5"/>
+                                    <TextBox Text="{Binding DialogBarcode, UpdateSourceTrigger=PropertyChanged}"
+                                             Background="#374151" Foreground="#F9FAFB" FontSize="14" Padding="12,10"/>
+                                </StackPanel>
+                            </Grid>
+                            
+                            <!-- Stock and Retail Qty Row -->
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Stock Qty (Wholesale) / الكمية" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,5"/>
+                                    <TextBox Text="{Binding DialogStock, UpdateSourceTrigger=PropertyChanged}"
+                                             Background="#374151" Foreground="#F9FAFB" FontSize="14" Padding="12,10"/>
+                                </StackPanel>
+                                
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Retail Qty / كمية القطاعى" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,5"/>
+                                    <TextBox Text="{Binding DialogRetailQuantity, UpdateSourceTrigger=PropertyChanged}"
+                                             Background="#374151" Foreground="#F9FAFB" FontSize="14" Padding="12,10"/>
+                                </StackPanel>
+                            </Grid>
+                            
+                            <!-- Cartons Row -->
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Carton Count / عدد الكراتين" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,5"/>
+                                    <TextBox Text="{Binding DialogCartonCount, UpdateSourceTrigger=PropertyChanged}"
+                                             Background="#374151" Foreground="#F9FAFB" FontSize="14" Padding="12,10"/>
+                                </StackPanel>
+                                
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Units Per Carton / وحدات الكرتونة" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,5"/>
+                                    <TextBox Text="{Binding DialogUnitsPerCarton, UpdateSourceTrigger=PropertyChanged}"
+                                             Background="#374151" Foreground="#F9FAFB" FontSize="14" Padding="12,10"/>
+                                </StackPanel>
+                            </Grid>
+                            
+                            <!-- Prices Row -->
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Retail Price (E£) / سعر القطاعى" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,5"/>
+                                    <TextBox Text="{Binding DialogRetailSalePrice, UpdateSourceTrigger=PropertyChanged}"
+                                             Background="#374151" Foreground="#F9FAFB" FontSize="14" Padding="12,10"/>
+                                </StackPanel>
+                                
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Wholesale Price (E£) / سعر الجملة" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,5"/>
+                                    <TextBox Text="{Binding DialogWholesaleSalePrice, UpdateSourceTrigger=PropertyChanged}"
+                                             Background="#374151" Foreground="#F9FAFB" FontSize="14" Padding="12,10"/>
+                                </StackPanel>
+                            </Grid>
+                            
+                            <!-- Supplier Price and Min Stock Row -->
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Supplier Price (E£) / سعر المورد" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,5"/>
+                                    <TextBox Text="{Binding DialogWholesaleSupplierPrice, UpdateSourceTrigger=PropertyChanged}"
+                                             Background="#374151" Foreground="#F9FAFB" FontSize="14" Padding="12,10"/>
+                                </StackPanel>
+                                
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Min Stock / الحد الأدنى" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,5"/>
+                                    <TextBox Text="{Binding DialogMinStock, UpdateSourceTrigger=PropertyChanged}"
+                                             Background="#374151" Foreground="#F9FAFB" FontSize="14" Padding="12,10"/>
+                                </StackPanel>
+                            </Grid>
                         </StackPanel>
-                        
-                        <StackPanel Grid.Column="2">
-                            <TextBlock Text="Cost" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,5"/>
-                            <TextBox Text="{Binding DialogCost, UpdateSourceTrigger=PropertyChanged}"
-                                     Background="#374151" Foreground="#F9FAFB" FontSize="14" Padding="12,10"/>
-                        </StackPanel>
-                    </Grid>
-                    
-                    <!-- Category and SKU Row -->
-                    <Grid Margin="0,0,0,15">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="15"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Text="Category" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,5"/>
-                            <TextBox Text="{Binding DialogCategory, UpdateSourceTrigger=PropertyChanged}"
-                                     Background="#374151" Foreground="#F9FAFB" FontSize="14" Padding="12,10"/>
-                        </StackPanel>
-                        
-                        <StackPanel Grid.Column="2">
-                            <TextBlock Text="SKU" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,5"/>
-                            <TextBox Text="{Binding DialogSku, UpdateSourceTrigger=PropertyChanged}"
-                                     Background="#374151" Foreground="#F9FAFB" FontSize="14" Padding="12,10"/>
-                        </StackPanel>
-                    </Grid>
-                    
-                    <!-- Stock and Tax Row -->
-                    <Grid Margin="0,0,0,15">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="15"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Text="Stock Quantity" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,5"/>
-                            <TextBox Text="{Binding DialogStock, UpdateSourceTrigger=PropertyChanged}"
-                                     Background="#374151" Foreground="#F9FAFB" FontSize="14" Padding="12,10"/>
-                        </StackPanel>
-                        
-                        <StackPanel Grid.Column="2">
-                            <TextBlock Text="Tax Rate (%)" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,5"/>
-                            <TextBox Text="{Binding DialogTaxRate, UpdateSourceTrigger=PropertyChanged, StringFormat=P0}"
-                                     Background="#374151" Foreground="#F9FAFB" FontSize="14" Padding="12,10"/>
-                        </StackPanel>
-                    </Grid>
-                    
-                    <!-- Barcode -->
-                    <TextBlock Text="Barcode" Foreground="#94A3B8" FontSize="13" Margin="0,0,0,5"/>
-                    <TextBox Text="{Binding DialogBarcode, UpdateSourceTrigger=PropertyChanged}"
-                             Background="#374151" Foreground="#F9FAFB" FontSize="14"
-                             Padding="12,10" Margin="0,0,0,25"/>
+                    </ScrollViewer>
                     
                     <!-- Buttons -->
-                    <Grid>
+                    <Grid Grid.Row="2">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="15"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         
-                        <Button Grid.Column="0" Content="Cancel" 
+                        <Button Grid.Column="0" Content="Cancel / إلغاء" 
                                 Command="{Binding CancelDialogCommand}"
                                 Background="#374151" Foreground="#F9FAFB"
                                 FontSize="15" Padding="0,14" Cursor="Hand">
@@ -390,7 +478,7 @@
                             </Button.Template>
                         </Button>
                         
-                        <Button Grid.Column="2" Content="Save Product" 
+                        <Button Grid.Column="2" Content="Save Product / حفظ" 
                                 Command="{Binding SaveProductCommand}"
                                 Background="#10B981" Foreground="White"
                                 FontSize="15" FontWeight="SemiBold" Padding="0,14" Cursor="Hand">
@@ -403,8 +491,9 @@
                             </Button.Template>
                         </Button>
                     </Grid>
-                </StackPanel>
+                </Grid>
             </Border>
         </Border>
+
     </Grid>
 </UserControl>

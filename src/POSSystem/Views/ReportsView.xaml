@@ -84,7 +84,7 @@
             <Border Grid.Column="0" Background="#1F2937" CornerRadius="12" Padding="20" Margin="0,0,10,0">
                 <StackPanel>
                     <TextBlock Text="Total Revenue" Foreground="#9CA3AF" FontSize="13"/>
-                    <TextBlock Text="{Binding TotalRevenue, StringFormat=C2}" 
+                    <TextBlock Text="{Binding TotalRevenue, StringFormat='E {0:N2}'}" 
                                Foreground="#10B981" FontSize="28" FontWeight="Bold" Margin="0,8,0,0"/>
                 </StackPanel>
             </Border>
@@ -93,7 +93,7 @@
             <Border Grid.Column="1" Background="#1F2937" CornerRadius="12" Padding="20" Margin="5,0">
                 <StackPanel>
                     <TextBlock Text="Gross Profit" Foreground="#9CA3AF" FontSize="13"/>
-                    <TextBlock Text="{Binding GrossProfit, StringFormat=C2}" 
+                    <TextBlock Text="{Binding GrossProfit, StringFormat='E {0:N2}'}" 
                                Foreground="#3B82F6" FontSize="28" FontWeight="Bold" Margin="0,8,0,0"/>
                 </StackPanel>
             </Border>
@@ -102,7 +102,7 @@
             <Border Grid.Column="2" Background="#1F2937" CornerRadius="12" Padding="20" Margin="5,0">
                 <StackPanel>
                     <TextBlock Text="Total Cost" Foreground="#9CA3AF" FontSize="13"/>
-                    <TextBlock Text="{Binding TotalCost, StringFormat=C2}" 
+                    <TextBlock Text="{Binding TotalCost, StringFormat='E {0:N2}'}" 
                                Foreground="#F59E0B" FontSize="28" FontWeight="Bold" Margin="0,8,0,0"/>
                 </StackPanel>
             </Border>
@@ -120,7 +120,7 @@
             <Border Grid.Column="4" Background="#1F2937" CornerRadius="12" Padding="20" Margin="10,0,0,0">
                 <StackPanel>
                     <TextBlock Text="Avg Order" Foreground="#9CA3AF" FontSize="13"/>
-                    <TextBlock Text="{Binding AverageOrderValue, StringFormat=C2}" 
+                    <TextBlock Text="{Binding AverageOrderValue, StringFormat='E {0:N2}'}" 
                                Foreground="#EC4899" FontSize="28" FontWeight="Bold" Margin="0,8,0,0"/>
                 </StackPanel>
             </Border>
@@ -198,7 +198,7 @@
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Product" Binding="{Binding ProductName}" Width="*" MinWidth="80"/>
                             <DataGridTextColumn Header="Qty" Binding="{Binding QuantitySold}" Width="70" MinWidth="50"/>
-                            <DataGridTextColumn Header="Revenue" Binding="{Binding Revenue, StringFormat=C2}" Width="110" MinWidth="80"/>
+                            <DataGridTextColumn Header="Revenue" Binding="{Binding Revenue, StringFormat='E {0:N2}'}" Width="110" MinWidth="80"/>
                         </DataGrid.Columns>
                     </DataGrid>
                 </StackPanel>
@@ -268,7 +268,7 @@
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Employee" Binding="{Binding EmployeeName}" Width="*" MinWidth="80"/>
                             <DataGridTextColumn Header="Orders" Binding="{Binding TransactionCount}" Width="80" MinWidth="60"/>
-                            <DataGridTextColumn Header="Total" Binding="{Binding TotalSales, StringFormat=C2}" Width="110" MinWidth="80"/>
+                            <DataGridTextColumn Header="Total" Binding="{Binding TotalSales, StringFormat='E {0:N2}'}" Width="110" MinWidth="80"/>
                         </DataGrid.Columns>
                     </DataGrid>
                 </StackPanel>
