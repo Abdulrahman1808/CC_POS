@@ -1,18 +1,19 @@
 import React from 'react';
 import { LayoutDashboard, Users, BarChart3, Settings } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
 import { useI18n } from '../utils/I18nContext';
 
-export function Sidebar() {
-  const { t } = useI18n();
-  const location = useLocation();
-  const activePage = location.pathname.substring(1) || 'dashboard';
+interface SidebarProps {
+  activePage: string;
+  onNavigate: (page: string) => void;
+}
 
+export function Sidebar({ activePage, onNavigate }: SidebarProps) {
+  const { t } = useI18n();
   const navItems = [
-    { id: 'dashboard', path: '/dashboard', label: t('dashboard'), icon: LayoutDashboard },
-    { id: 'tenants', path: '/tenants', label: t('tenants'), icon: Users },
-    { id: 'analytics', path: '/analytics', label: t('analytics'), icon: BarChart3 },
-    { id: 'settings', path: '/settings', label: t('settings'), icon: Settings }
+    { id: 'dashboard', label: t('dashboard'), icon: LayoutDashboard },
+    { id: 'tenants', label: t('tenants'), icon: Users },
+    { id: 'analytics', label: t('analytics'), icon: BarChart3 },
+    { id: 'settings', label: t('settings'), icon: Settings }
   ];
 
   return (
@@ -32,20 +33,20 @@ export function Sidebar() {
       <nav className="flex-1 p-4">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = activePage === item.id || (activePage === '' && item.id === 'dashboard');
+          const isActive = activePage === item.id;
 
           return (
-            <Link
+            <button
               key={item.id}
-              to={item.path}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors ${isActive
+              onClick={() => onNavigate(item.id)}
+              className={`w - full flex items - center gap - 3 px - 4 py - 3 rounded - lg mb - 2 transition - colors ${isActive
                   ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                   : 'text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-                }`}
+                } `}
             >
               <Icon size={20} />
               <span>{item.label}</span>
-            </Link>
+            </button>
           );
         })}
       </nav>

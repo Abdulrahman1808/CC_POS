@@ -206,7 +206,7 @@
                             </StackPanel>
                             <StackPanel Grid.Column="1">
                                 <TextBlock Text="Today's Sales" Foreground="#9CA3AF" FontSize="12"/>
-                                <TextBlock Text="{Binding TodaysSales, StringFormat=C2}" Foreground="#10B981" 
+                                <TextBlock Text="{Binding TodaysSales, StringFormat='E {0:N2}'}" Foreground="#10B981" 
                                            FontSize="28" FontWeight="Bold"/>
                             </StackPanel>
                         </Grid>

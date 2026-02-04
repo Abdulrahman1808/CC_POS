@@ -58,6 +58,11 @@ public class Transaction
     public Guid? BusinessId { get; set; }
     
     /// <summary>
+    /// Links transaction to specific branch.
+    /// </summary>
+    public Guid? BranchId { get; set; }
+    
+    /// <summary>
     /// Staff member who processed this transaction.
     /// </summary>
     public Guid? StaffMemberId { get; set; }
@@ -68,6 +73,7 @@ public class Transaction
     public UpdateSource LastUpdatedBy { get; set; } = UpdateSource.Desktop;
     
     #endregion
+
     
     /// <summary>
     /// Calculates totals based on items.

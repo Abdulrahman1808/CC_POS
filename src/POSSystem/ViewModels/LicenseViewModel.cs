@@ -230,11 +230,16 @@ public partial class LicenseViewModel : ObservableObject
                     // Persist to SQLite
                     await SaveLicenseToDatabase(LicenseKeyInput.Trim());
                     
-                    Debug.WriteLine("[License] Developer mode activated - proceeding to POS...");
+                    Debug.WriteLine("[License] Developer mode activated");
                     DeveloperModeActivated?.Invoke(this, EventArgs.Empty);
                     
-                    await Task.Delay(800);
-                    OnLicenseVerified();
+                    // Check if branch selection is required
+                    if (await ShowBranchSelectorIfRequired())
+                    {
+                        await Task.Delay(300);
+                        OnLicenseVerified();
+                    }
+                    // If branch selector was cancelled, don't proceed
                 }
                 else
                 {
@@ -246,8 +251,13 @@ public partial class LicenseViewModel : ObservableObject
                     // Persist to SQLite
                     await SaveLicenseToDatabase(LicenseKeyInput.Trim());
                     
-                    await Task.Delay(800);
-                    OnLicenseVerified();
+                    // Check if branch selection is required
+                    if (await ShowBranchSelectorIfRequired())
+                    {
+                        await Task.Delay(300);
+                        OnLicenseVerified();
+                    }
+                    // If branch selector was cancelled, don't proceed
                 }
             }
             else
@@ -267,6 +277,52 @@ public partial class LicenseViewModel : ObservableObject
             IsActivating = false;
         }
     }
+    
+    /// <summary>
+    /// Shows the branch selector dialog if branch selection is required.
+    /// Returns true if we should proceed (branch selected or not required).
+    /// Returns false if user cancelled.
+    /// </summary>
+    private async Task<bool> ShowBranchSelectorIfRequired()
+    {
+        // Check if branch selection is required
+        if (!_licenseManager.RequiresBranchSelection)
+        {
+            Debug.WriteLine("[License] Branch already selected or not required");
+            return true;
+        }
+        
+        Debug.WriteLine("[License] Branch selection required - showing selector...");
+        StatusMessage = "Please select your branch...";
+        
+        try
+        {
+            // Create and show BranchSelectorView
+            var branchSelector = new Views.BranchSelectorView();
+            var result = branchSelector.ShowDialog();
+            
+            if (result == true)
+            {
+                Debug.WriteLine("[License] Branch selected successfully");
+                return true;
+            }
+            else
+            {
+                // User cancelled - show error
+                HasActivationError = true;
+                ActivationErrorMessage = "Branch selection is required to continue.";
+                Debug.WriteLine("[License] Branch selection cancelled by user");
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[License] Error showing branch selector: {ex.Message}");
+            // If branch selector fails, continue anyway (offline mode)
+            return true;
+        }
+    }
+
 
     [RelayCommand]
     private void EnterPOS()

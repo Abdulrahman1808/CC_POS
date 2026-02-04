@@ -3,8 +3,9 @@ using System;
 namespace POSSystem.Services.Interfaces;
 
 /// <summary>
-/// Manages the current tenant (business + branch) context for multi-tenancy.
-/// The BusinessId is set during license activation, BranchId during branch selection.
+/// Manages the current tenant (business + branch + staff) context for multi-tenancy.
+/// The BusinessId is set during license activation, BranchId during branch selection,
+/// StaffId during staff PIN login.
 /// </summary>
 public interface ITenantContext
 {
@@ -19,6 +20,16 @@ public interface ITenantContext
     Guid? CurrentBranchId { get; }
     
     /// <summary>
+    /// The current staff member ID. Null if no staff logged in.
+    /// </summary>
+    Guid? CurrentStaffId { get; }
+    
+    /// <summary>
+    /// The current staff member name for display.
+    /// </summary>
+    string? CurrentStaffName { get; }
+    
+    /// <summary>
     /// Whether a valid business context is established.
     /// </summary>
     bool IsContextValid { get; }
@@ -27,6 +38,11 @@ public interface ITenantContext
     /// Whether a branch has been selected and locked.
     /// </summary>
     bool IsBranchSelected { get; }
+    
+    /// <summary>
+    /// Whether a staff member is currently logged in.
+    /// </summary>
+    bool IsStaffLoggedIn { get; }
     
     /// <summary>
     /// Whether the full context (business + branch) is ready for operations.
@@ -47,6 +63,13 @@ public interface ITenantContext
     void SetBranchContext(Guid branchId, string branchName);
     
     /// <summary>
+    /// Sets the staff context. Called after successful PIN login.
+    /// </summary>
+    /// <param name="staffId">The staff member ID.</param>
+    /// <param name="staffName">The staff member name for display.</param>
+    void SetStaffContext(Guid staffId, string staffName);
+    
+    /// <summary>
     /// Gets the cached branch name for display purposes.
     /// </summary>
     string? CurrentBranchName { get; }
@@ -60,6 +83,11 @@ public interface ITenantContext
     /// Clears only the branch context (for branch re-selection).
     /// </summary>
     void ClearBranchContext();
+    
+    /// <summary>
+    /// Clears only the staff context (for staff logout/lock).
+    /// </summary>
+    void ClearStaffContext();
     
     /// <summary>
     /// Loads persisted business and branch context from storage.

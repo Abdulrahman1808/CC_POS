@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<BusinessProfile> BusinessProfiles { get; set; }
     public DbSet<StoreSettings> StoreSettings { get; set; }
     public DbSet<HardwareSettings> HardwareSettings { get; set; }
+    public DbSet<ActivityLog> ActivityLogs { get; set; }
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
@@ -78,6 +79,18 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.Pin);
             entity.HasIndex(e => e.IsActive);
             entity.HasIndex(e => e.Level);
+        });
+
+        // ActivityLog configuration
+        modelBuilder.Entity<ActivityLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Action);
+            entity.HasIndex(e => e.EntityType);
+            entity.HasIndex(e => e.Timestamp);
+            entity.HasIndex(e => e.StaffId);
+            entity.HasIndex(e => e.IsSynced);
+            entity.HasIndex(e => new { e.BusinessId, e.BranchId });
         });
     }
 }

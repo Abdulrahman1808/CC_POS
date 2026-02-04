@@ -231,11 +231,7 @@
                                    Margin="0,8,0,0"
                                    Visibility="{Binding HasActivationError, Converter={StaticResource BoolToVisibility}}"/>
                         
-                        <TextBlock Text="Enter 'DevSecret2026' for developer mode" 
-                                   FontSize="10" 
-                                   Foreground="#64748B" 
-                                   Margin="0,8,0,0"
-                                   FontStyle="Italic"/>
+
                     </StackPanel>
                 </Border>
                 
@@ -284,7 +280,7 @@
                                Foreground="White" 
                                HorizontalAlignment="Center"/>
                     
-                    <TextBlock Text="Enter your license key to activate POS System, or use 'DevSecret2026' for developer mode." 
+                    <TextBlock Text="Enter your license key to activate POS System." 
                                FontSize="13" 
                                Foreground="#94A3B8" 
                                TextWrapping="Wrap"

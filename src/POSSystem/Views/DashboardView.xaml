@@ -235,7 +235,7 @@
                                 <TextBlock Text="💰" FontSize="20" Margin="0,0,10,0" VerticalAlignment="Center"/>
                                 <StackPanel>
                                     <TextBlock Text="Today's Sales" FontSize="11" Foreground="#94A3B8"/>
-                                    <TextBlock Text="{Binding DailySales, StringFormat=C2}" FontSize="18" FontWeight="Bold" Foreground="#10B981"/>
+                                    <TextBlock Text="{Binding DailySales, StringFormat='E {0:N2}'}" FontSize="18" FontWeight="Bold" Foreground="#10B981"/>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
@@ -409,7 +409,7 @@
                                                 
                                                 <!-- Price -->
                                                 <TextBlock Grid.Row="2"
-                                                           Text="{Binding Price, StringFormat=C2}"
+                                                           Text="{Binding Price, StringFormat='E {0:N2}'}"
                                                            Foreground="#6366F1"
                                                            FontSize="15"
                                                            FontWeight="Bold"
@@ -505,7 +505,7 @@
                                                 
                                                 <!-- Line Total -->
                                                 <TextBlock Grid.Column="2" 
-                                                           Text="{Binding LineTotal, StringFormat=C2}" 
+                                                           Text="{Binding LineTotal, StringFormat='E {0:N2}'}" 
                                                            Foreground="#10B981" 
                                                            FontSize="16"
                                                            FontWeight="Bold"
@@ -524,18 +524,18 @@
                             <StackPanel>
                                 <Grid Margin="0,0,0,10">
                                     <TextBlock Text="Subtotal" Foreground="#94A3B8" FontSize="15"/>
-                                    <TextBlock Text="{Binding SubTotal, StringFormat=C2}" 
+                                    <TextBlock Text="{Binding SubTotal, StringFormat='E {0:N2}'}" 
                                                Foreground="White" FontSize="15" HorizontalAlignment="Right"/>
                                 </Grid>
                                 <Grid Margin="0,0,0,10">
                                     <TextBlock Text="Tax (14%)" Foreground="#94A3B8" FontSize="15"/>
-                                    <TextBlock Text="{Binding TaxAmount, StringFormat=C2}" 
+                                    <TextBlock Text="{Binding TaxAmount, StringFormat='E {0:N2}'}" 
                                                Foreground="White" FontSize="15" HorizontalAlignment="Right"/>
                                 </Grid>
                                 <Border Height="1" Background="#475569" Margin="0,6"/>
                                 <Grid Margin="0,10,0,0">
                                     <TextBlock Text="TOTAL" Foreground="White" FontSize="18" FontWeight="Bold"/>
-                                    <TextBlock Text="{Binding TotalAmount, StringFormat=C2}" 
+                                    <TextBlock Text="{Binding TotalAmount, StringFormat='E {0:N2}'}" 
                                                Foreground="#10B981" FontSize="28" FontWeight="Bold" HorizontalAlignment="Right"/>
                                 </Grid>
                             </StackPanel>
@@ -596,7 +596,7 @@
                     <Border Grid.Row="1" Background="#334155" CornerRadius="12" Padding="24" Margin="0,0,0,24">
                         <StackPanel HorizontalAlignment="Center">
                             <TextBlock Text="Total Amount" Foreground="#94A3B8" FontSize="14" HorizontalAlignment="Center"/>
-                            <TextBlock Text="{Binding TotalAmount, StringFormat=C2}" 
+                            <TextBlock Text="{Binding TotalAmount, StringFormat='E {0:N2}'}" 
                                        Foreground="#10B981" FontSize="42" FontWeight="Bold" HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
@@ -629,11 +629,11 @@
                                  FontWeight="Bold"
                                  BorderThickness="0"
                                  Padding="16,12"
-                                 Text="{Binding AmountTendered, StringFormat=C2, UpdateSourceTrigger=PropertyChanged}"/>
+                                 Text="{Binding AmountTendered, StringFormat='E {0:N2}', UpdateSourceTrigger=PropertyChanged}"/>
                         
                         <Grid Margin="0,16,0,0" Visibility="{Binding ChangeAmount, Converter={StaticResource PositiveToVisibility}}">
                             <TextBlock Text="Change:" Foreground="#94A3B8" FontSize="16"/>
-                            <TextBlock Text="{Binding ChangeAmount, StringFormat=C2}" 
+                            <TextBlock Text="{Binding ChangeAmount, StringFormat='E {0:N2}'}" 
                                        Foreground="#FBBF24" FontSize="24" FontWeight="Bold" HorizontalAlignment="Right"/>
                         </Grid>
                     </StackPanel>

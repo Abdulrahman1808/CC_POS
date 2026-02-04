@@ -1,17 +1,21 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Win32;
 using POSSystem.Data.Interfaces;
 using POSSystem.Models;
 using POSSystem.Services.Interfaces;
 
 namespace POSSystem.ViewModels;
+
 
 /// <summary>
 /// ViewModel for Inventory Management with product CRUD operations.
@@ -71,6 +75,37 @@ public partial class InventoryViewModel : ObservableObject
 
     [ObservableProperty]
     private int _dialogMinStock = 5;
+
+    // New inventory dialog fields
+    [ObservableProperty]
+    private string _dialogProductType = string.Empty;
+
+    [ObservableProperty]
+    private string _dialogFlavor = string.Empty;
+
+    [ObservableProperty]
+    private string _dialogWeight = string.Empty;
+
+    [ObservableProperty]
+    private string _dialogLocation = string.Empty;
+
+    [ObservableProperty]
+    private int _dialogRetailQuantity;
+
+    [ObservableProperty]
+    private int _dialogCartonCount;
+
+    [ObservableProperty]
+    private int _dialogUnitsPerCarton;
+
+    [ObservableProperty]
+    private decimal _dialogRetailSalePrice;
+
+    [ObservableProperty]
+    private decimal _dialogWholesaleSalePrice;
+
+    [ObservableProperty]
+    private decimal _dialogWholesaleSupplierPrice;
 
     [ObservableProperty]
     private ObservableCollection<Product> _lowStockProducts = new();
@@ -185,6 +220,478 @@ public partial class InventoryViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task ImportCsvAsync()
+    {
+        try
+        {
+            var dialog = new OpenFileDialog
+            {
+                Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*",
+                Title = "Select CSV File to Import"
+            };
+
+            if (dialog.ShowDialog() != true) return;
+
+            IsLoading = true;
+            var imported = 0;
+            var skipped = 0;
+            var lines = await File.ReadAllLinesAsync(dialog.FileName);
+
+            if (lines.Length < 2)
+            {
+                MessageBox.Show("CSV file is empty or has no data rows.", "Import Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Parse header row to detect column positions
+            var headerFields = ParseCsvFields(lines[0]);
+            var columnMap = DetectCsvColumnMapping(headerFields);
+
+            Debug.WriteLine($"[CSV Import] Detected columns: {string.Join(", ", columnMap.Keys)}");
+
+            // Parse data rows starting from index 1
+            for (int i = 1; i < lines.Length; i++)
+            {
+                var line = lines[i];
+                if (string.IsNullOrWhiteSpace(line)) continue;
+
+                var fields = ParseCsvFields(line);
+                var product = ParseCsvRow(fields, columnMap);
+                
+                if (product != null && !string.IsNullOrWhiteSpace(product.Name))
+                {
+                    await _dataService.AddProductAsync(product);
+                    imported++;
+                }
+                else
+                {
+                    skipped++;
+                    Debug.WriteLine($"[CSV Import] Skipped row {i}: {line}");
+                }
+            }
+
+            await LoadProductsAsync();
+            await LoadCategoriesAsync();
+            
+            MessageBox.Show($"Import complete!\n\nImported: {imported} products\nSkipped: {skipped} rows", 
+                "CSV Import", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Import] CSV Error: {ex.Message}");
+            MessageBox.Show($"Error importing CSV:\n{ex.Message}", "Import Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// Detect column mapping from CSV header row
+    /// </summary>
+    private Dictionary<string, int> DetectCsvColumnMapping(List<string> headers)
+    {
+        var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        
+        for (int i = 0; i < headers.Count; i++)
+        {
+            var header = headers[i].Trim().ToLower();
+            
+            // Name mappings
+            if (header.Contains("name") || header.Contains("اسم") || header.Contains("الاسم"))
+                map["Name"] = i;
+            // Category mappings
+            else if (header.Contains("category") || header.Contains("فئة") || header.Contains("الفئة"))
+                map["Category"] = i;
+            // Quantity/Stock mappings
+            else if (header == "quantity" || header.Contains("كمية") || header.Contains("الكمية"))
+                map["Quantity"] = i;
+            // Retail quantity
+            else if (header.Contains("retail_quantity") || header.Contains("retail quantity") || header.Contains("كمية القطاعى"))
+                map["RetailQuantity"] = i;
+            // Location
+            else if (header.Contains("location") || header.Contains("موقع") || header.Contains("الموقع") || header.Contains("store"))
+                map["Location"] = i;
+            // Barcode
+            else if (header.Contains("barcode") || header.Contains("باركود"))
+                map["Barcode"] = i;
+            // Type
+            else if (header.Contains("type") || header.Contains("نوع") || header.Contains("النوع"))
+                map["Type"] = i;
+            // Weight
+            else if (header.Contains("weight") || header.Contains("وزن") || header.Contains("الوزن"))
+                map["Weight"] = i;
+            // Carton count
+            else if (header.Contains("carton_count") || header.Contains("carton count") || header.Contains("كراتين"))
+                map["CartonCount"] = i;
+            // Units per carton
+            else if (header.Contains("units_per_carton") || header.Contains("units per carton") || header.Contains("وحدات"))
+                map["UnitsPerCarton"] = i;
+            // Flavor
+            else if (header.Contains("flavor") || header.Contains("نكهة") || header.Contains("النكهة"))
+                map["Flavor"] = i;
+            // Supplier price (wholesale)
+            else if (header.Contains("supplier_price") || header.Contains("supplier price") || header.Contains("wholesale_supplier") || header.Contains("سعر المورد"))
+                map["SupplierPrice"] = i;
+            // Wholesale sale price
+            else if (header.Contains("wholesale_sale") || header.Contains("wholesale sale") || header.Contains("سعر الجملة"))
+                map["WholesaleSalePrice"] = i;
+            // Retail sale price
+            else if (header.Contains("retail_sale") || header.Contains("retail sale") || header.Contains("سعر القطاعى") || header.Contains("retail_price") || header.Contains("price"))
+                map["RetailSalePrice"] = i;
+            // Extra retail quantity
+            else if (header.Contains("extra_retail") || header.Contains("extra retail"))
+                map["ExtraRetailQuantity"] = i;
+            // Min quantity
+            else if (header.Contains("min_quantity") || header.Contains("min quantity") || header.Contains("الحد الأدنى"))
+                map["MinQuantity"] = i;
+        }
+        
+        return map;
+    }
+
+    /// <summary>
+    /// Parse a CSV row into a Product using the column mapping
+    /// </summary>
+    private Product? ParseCsvRow(List<string> fields, Dictionary<string, int> columnMap)
+    {
+        try
+        {
+            string GetField(string key, string defaultVal = "")
+            {
+                if (columnMap.TryGetValue(key, out int idx) && idx < fields.Count)
+                    return fields[idx].Trim();
+                return defaultVal;
+            }
+
+            int GetIntField(string key, int defaultVal = 0)
+            {
+                var val = GetField(key);
+                return int.TryParse(val, out var result) ? result : defaultVal;
+            }
+
+            decimal GetDecimalField(string key, decimal defaultVal = 0m)
+            {
+                var val = GetField(key).Replace("$", "").Replace("E£", "").Replace("£", "").Trim();
+                return decimal.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out var result) ? result : defaultVal;
+            }
+
+            var name = GetField("Name");
+            if (string.IsNullOrWhiteSpace(name)) return null;
+
+            var retailPrice = GetDecimalField("RetailSalePrice");
+            var wholesalePrice = GetDecimalField("WholesaleSalePrice");
+            var supplierPrice = GetDecimalField("SupplierPrice");
+
+            return new Product
+            {
+                Id = Guid.NewGuid(),
+                Name = name,
+                Category = GetField("Category", "Uncategorized"),
+                StockQuantity = GetIntField("Quantity"),
+                RetailQuantity = GetIntField("RetailQuantity"),
+                Location = GetField("Location"),
+                Barcode = GetField("Barcode"),
+                ProductType = GetField("Type"),
+                Weight = GetField("Weight"),
+                CartonCount = GetIntField("CartonCount"),
+                UnitsPerCarton = GetIntField("UnitsPerCarton"),
+                Flavor = GetField("Flavor"),
+                WholesaleSupplierPrice = supplierPrice,
+                WholesaleSalePrice = wholesalePrice,
+                RetailSalePrice = retailPrice,
+                ExtraRetailQuantity = GetIntField("ExtraRetailQuantity"),
+                MinStockLevel = GetIntField("MinQuantity", 5),
+                // Set Price and Cost from the pricing fields
+                Price = retailPrice > 0 ? retailPrice : wholesalePrice,
+                Cost = supplierPrice,
+                TaxRate = 0.14m,
+                IsActive = true,
+                LastUpdatedBy = UpdateSource.Desktop
+            };
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[CSV Import] Parse error: {ex.Message}");
+            return null;
+        }
+    }
+
+
+    [RelayCommand]
+    private async Task ImportExcelAsync()
+    {
+        try
+        {
+            var dialog = new OpenFileDialog
+            {
+                Filter = "Excel Files (*.xlsx;*.xls)|*.xlsx;*.xls|CSV Files (*.csv)|*.csv|All Files (*.*)|*.*",
+                Title = "Select Excel/CSV File to Import"
+            };
+
+            if (dialog.ShowDialog() != true) return;
+
+            var extension = Path.GetExtension(dialog.FileName).ToLower();
+            
+            if (extension == ".csv")
+            {
+                await ImportCsvAsync();
+                return;
+            }
+
+            IsLoading = true;
+            var imported = 0;
+            var skipped = 0;
+
+            await Task.Run(async () =>
+            {
+                using var workbook = new ClosedXML.Excel.XLWorkbook(dialog.FileName);
+                var worksheet = workbook.Worksheets.First();
+                var rows = worksheet.RangeUsed()?.RowsUsed().ToList();
+                
+                if (rows == null || rows.Count == 0)
+                {
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                        MessageBox.Show("Excel file is empty.", "Import Error", MessageBoxButton.OK, MessageBoxImage.Warning));
+                    return;
+                }
+
+                // Try to detect column mappings from header row
+                var columnMap = DetectColumnMapping(rows[0]);
+                var startRow = columnMap.Any() ? 1 : 0; // Skip header if detected
+
+                for (int i = startRow; i < rows.Count; i++)
+                {
+                    var row = rows[i];
+                    var product = ParseExcelRow(row, columnMap);
+                    
+                    if (product != null)
+                    {
+                        await Application.Current.Dispatcher.InvokeAsync(async () =>
+                        {
+                            await _dataService.AddProductAsync(product);
+                        });
+                        imported++;
+                    }
+                    else
+                    {
+                        skipped++;
+                    }
+                }
+            });
+
+            await LoadProductsAsync();
+            await LoadCategoriesAsync();
+            
+            MessageBox.Show($"Excel Import Complete!\n\nImported: {imported} products\nSkipped: {skipped} rows", 
+                "Excel Import", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Import] Excel Error: {ex.Message}");
+            MessageBox.Show($"Error importing Excel:\n{ex.Message}", "Import Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private Dictionary<string, int> DetectColumnMapping(ClosedXML.Excel.IXLRangeRow headerRow)
+    {
+        var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var cells = headerRow.CellsUsed().ToList();
+        
+        for (int i = 0; i < cells.Count; i++)
+        {
+            var header = cells[i].GetString().Trim().ToLower();
+            var colIndex = cells[i].Address.ColumnNumber;
+            
+            // Core fields
+            if (header == "id")
+                map["Id"] = colIndex;
+            else if (header == "name" || header.Contains("اسم"))
+                map["Name"] = colIndex;
+            else if (header == "category" || header.Contains("فئة"))
+                map["Category"] = colIndex;
+            else if (header == "quantity" || header == "qty")
+                map["Quantity"] = colIndex;
+            else if (header == "retail_quantity" || header.Contains("retail_qty"))
+                map["RetailQuantity"] = colIndex;
+            else if (header == "location" || header.Contains("موقع"))
+                map["Location"] = colIndex;
+            else if (header == "barcode" || header.Contains("باركود"))
+                map["Barcode"] = colIndex;
+            else if (header == "type" || header == "product_type")
+                map["ProductType"] = colIndex;
+            else if (header == "weight" || header.Contains("وزن"))
+                map["Weight"] = colIndex;
+            else if (header == "carton_count" || header.Contains("carton"))
+                map["CartonCount"] = colIndex;
+            else if (header == "units_per_carton" || header.Contains("units_per"))
+                map["UnitsPerCarton"] = colIndex;
+            else if (header == "flavor" || header.Contains("نكهة"))
+                map["Flavor"] = colIndex;
+            else if (header == "carton_fraction")
+                map["CartonFraction"] = colIndex;
+            else if (header == "unit_type")
+                map["UnitType"] = colIndex;
+            else if (header == "wholesale_supplier_price" || header.Contains("supplier"))
+                map["WholesaleSupplierPrice"] = colIndex;
+            else if (header == "wholesale_sale_price" || header.Contains("wholesale_sale"))
+                map["WholesaleSalePrice"] = colIndex;
+            else if (header == "retail_sale_price" || header.Contains("retail_sale"))
+                map["RetailSalePrice"] = colIndex;
+            else if (header == "extra_retail_quantity")
+                map["ExtraRetailQuantity"] = colIndex;
+            else if (header == "min_quantity" || header.Contains("min_stock"))
+                map["MinQuantity"] = colIndex;
+            else if (header == "image" || header.Contains("صورة"))
+                map["ImagePath"] = colIndex;
+            // Fallback for price/cost/sku/tax
+            else if (header.Contains("price") || header.Contains("سعر"))
+                map["Price"] = colIndex;
+            else if (header.Contains("cost") || header.Contains("تكلفة"))
+                map["Cost"] = colIndex;
+            else if (header.Contains("sku") || header.Contains("code"))
+                map["SKU"] = colIndex;
+            else if (header.Contains("tax") || header.Contains("ضريبة"))
+                map["TaxRate"] = colIndex;
+        }
+
+        return map;
+    }
+
+
+    private Product? ParseExcelRow(ClosedXML.Excel.IXLRangeRow row, Dictionary<string, int> columnMap)
+    {
+        try
+        {
+            string GetCellValue(string key, int defaultCol = 0)
+            {
+                if (defaultCol == 0 && !columnMap.ContainsKey(key)) return "";
+                var col = columnMap.TryGetValue(key, out var c) ? c : defaultCol;
+                if (col == 0) return "";
+                return row.Cell(col).GetString().Trim();
+            }
+
+            var name = GetCellValue("Name", 2); // Column 2 is 'name' in CSV
+            if (string.IsNullOrWhiteSpace(name)) return null;
+
+            return new Product
+            {
+                Id = Guid.NewGuid(),
+                Name = name,
+                Category = GetCellValue("Category").Length > 0 ? GetCellValue("Category") : "Uncategorized",
+                StockQuantity = ParseInt(GetCellValue("Quantity")),
+                RetailQuantity = ParseInt(GetCellValue("RetailQuantity")),
+                Location = GetCellValue("Location"),
+                Barcode = GetCellValue("Barcode"),
+                ProductType = GetCellValue("ProductType"),
+                Weight = GetCellValue("Weight"),
+                CartonCount = ParseInt(GetCellValue("CartonCount")),
+                UnitsPerCarton = ParseInt(GetCellValue("UnitsPerCarton")),
+                Flavor = GetCellValue("Flavor"),
+                CartonFraction = ParseDecimal(GetCellValue("CartonFraction")),
+                UnitType = GetCellValue("UnitType"),
+                WholesaleSupplierPrice = ParseDecimal(GetCellValue("WholesaleSupplierPrice")),
+                WholesaleSalePrice = ParseDecimal(GetCellValue("WholesaleSalePrice")),
+                RetailSalePrice = ParseDecimal(GetCellValue("RetailSalePrice")),
+                ExtraRetailQuantity = ParseInt(GetCellValue("ExtraRetailQuantity")),
+                MinStockLevel = ParseInt(GetCellValue("MinQuantity")),
+                ImagePath = GetCellValue("ImagePath"),
+                // Use RetailSalePrice as default Price if available, else WholesaleSalePrice
+                Price = ParseDecimal(GetCellValue("RetailSalePrice")) > 0 
+                    ? ParseDecimal(GetCellValue("RetailSalePrice")) 
+                    : ParseDecimal(GetCellValue("WholesaleSalePrice")),
+                Cost = ParseDecimal(GetCellValue("WholesaleSupplierPrice")),
+                TaxRate = 0.14m,
+                IsActive = true
+            };
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Import] Excel row parse error: {ex.Message}");
+            return null;
+        }
+    }
+
+
+
+    private Product? ParseCsvLine(string line)
+    {
+        try
+        {
+            // Handle quoted fields and commas within quotes
+            var fields = ParseCsvFields(line);
+            if (fields.Count < 1 || string.IsNullOrWhiteSpace(fields[0])) return null;
+
+            var product = new Product
+            {
+                Id = Guid.NewGuid(),
+                Name = fields[0].Trim(),
+                Price = fields.Count > 1 ? ParseDecimal(fields[1]) : 0m,
+                Cost = fields.Count > 2 ? ParseDecimal(fields[2]) : 0m,
+                Category = fields.Count > 3 ? fields[3].Trim() : "Uncategorized",
+                Sku = fields.Count > 4 ? fields[4].Trim() : "",
+                Barcode = fields.Count > 5 ? fields[5].Trim() : "",
+                StockQuantity = fields.Count > 6 ? ParseInt(fields[6]) : 0,
+                TaxRate = fields.Count > 7 ? ParseDecimal(fields[7]) : 0.14m,
+                IsActive = true
+            };
+
+            return product;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Import] Parse error: {ex.Message} - Line: {line}");
+            return null;
+        }
+    }
+
+    private List<string> ParseCsvFields(string line)
+    {
+        var fields = new List<string>();
+        var inQuotes = false;
+        var field = "";
+
+        for (int i = 0; i < line.Length; i++)
+        {
+            char c = line[i];
+            if (c == '"')
+            {
+                inQuotes = !inQuotes;
+            }
+            else if (c == ',' && !inQuotes)
+            {
+                fields.Add(field);
+                field = "";
+            }
+            else
+            {
+                field += c;
+            }
+        }
+        fields.Add(field);
+        return fields;
+    }
+
+    private decimal ParseDecimal(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return 0m;
+        value = value.Trim().Replace("$", "").Replace("£", "").Replace("€", "").Replace("%", "");
+        return decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var result) ? result : 0m;
+    }
+
+    private int ParseInt(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return 0;
+        value = value.Trim();
+        return int.TryParse(value, out var result) ? result : 0;
+    }
+
+    [RelayCommand]
     private void ShowEditProduct()
     {
         if (SelectedProduct == null) return;
@@ -201,6 +708,17 @@ public partial class InventoryViewModel : ObservableObject
         DialogStock = SelectedProduct.StockQuantity;
         DialogTaxRate = SelectedProduct.TaxRate;
         DialogMinStock = SelectedProduct.MinStockLevel;
+        // New fields
+        DialogProductType = SelectedProduct.ProductType ?? "";
+        DialogFlavor = SelectedProduct.Flavor ?? "";
+        DialogWeight = SelectedProduct.Weight ?? "";
+        DialogLocation = SelectedProduct.Location ?? "";
+        DialogRetailQuantity = SelectedProduct.RetailQuantity;
+        DialogCartonCount = SelectedProduct.CartonCount;
+        DialogUnitsPerCarton = SelectedProduct.UnitsPerCarton;
+        DialogRetailSalePrice = SelectedProduct.RetailSalePrice;
+        DialogWholesaleSalePrice = SelectedProduct.WholesaleSalePrice;
+        DialogWholesaleSupplierPrice = SelectedProduct.WholesaleSupplierPrice;
         
         ShowProductDialog = true;
     }
@@ -231,6 +749,17 @@ public partial class InventoryViewModel : ObservableObject
                     product.StockQuantity = DialogStock;
                     product.TaxRate = DialogTaxRate;
                     product.MinStockLevel = DialogMinStock;
+                    // New fields
+                    product.ProductType = string.IsNullOrWhiteSpace(DialogProductType) ? null : DialogProductType;
+                    product.Flavor = string.IsNullOrWhiteSpace(DialogFlavor) ? null : DialogFlavor;
+                    product.Weight = string.IsNullOrWhiteSpace(DialogWeight) ? null : DialogWeight;
+                    product.Location = string.IsNullOrWhiteSpace(DialogLocation) ? null : DialogLocation;
+                    product.RetailQuantity = DialogRetailQuantity;
+                    product.CartonCount = DialogCartonCount;
+                    product.UnitsPerCarton = DialogUnitsPerCarton;
+                    product.RetailSalePrice = DialogRetailSalePrice;
+                    product.WholesaleSalePrice = DialogWholesaleSalePrice;
+                    product.WholesaleSupplierPrice = DialogWholesaleSupplierPrice;
                     product.LastUpdatedBy = UpdateSource.Desktop;
 
                     await _dataService.UpdateProductAsync(product);
@@ -251,6 +780,16 @@ public partial class InventoryViewModel : ObservableObject
                     StockQuantity = DialogStock,
                     TaxRate = DialogTaxRate,
                     MinStockLevel = DialogMinStock,
+                    ProductType = string.IsNullOrWhiteSpace(DialogProductType) ? null : DialogProductType,
+                    Flavor = string.IsNullOrWhiteSpace(DialogFlavor) ? null : DialogFlavor,
+                    Weight = string.IsNullOrWhiteSpace(DialogWeight) ? null : DialogWeight,
+                    Location = string.IsNullOrWhiteSpace(DialogLocation) ? null : DialogLocation,
+                    RetailQuantity = DialogRetailQuantity,
+                    CartonCount = DialogCartonCount,
+                    UnitsPerCarton = DialogUnitsPerCarton,
+                    RetailSalePrice = DialogRetailSalePrice,
+                    WholesaleSalePrice = DialogWholesaleSalePrice,
+                    WholesaleSupplierPrice = DialogWholesaleSupplierPrice,
                     LastUpdatedBy = UpdateSource.Desktop
                 };
 
@@ -337,6 +876,17 @@ public partial class InventoryViewModel : ObservableObject
         DialogStock = 0;
         DialogTaxRate = 0.14m;
         DialogMinStock = 5;
+        // New fields
+        DialogProductType = string.Empty;
+        DialogFlavor = string.Empty;
+        DialogWeight = string.Empty;
+        DialogLocation = string.Empty;
+        DialogRetailQuantity = 0;
+        DialogCartonCount = 0;
+        DialogUnitsPerCarton = 0;
+        DialogRetailSalePrice = 0;
+        DialogWholesaleSalePrice = 0;
+        DialogWholesaleSupplierPrice = 0;
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 -- =====================================================
--- MULTI-BRANCH SUPABASE MIGRATION
+-- MULTI-BRANCH SUPABASE MIGRATION (IDEMPOTENT)
 -- Run in Supabase SQL Editor
+-- Safe to run multiple times
 -- =====================================================
 
 -- =====================================================
@@ -41,7 +42,7 @@ ALTER TABLE branches ENABLE ROW LEVEL SECURITY;
 
 -- =====================================================
 -- 4. CREATE OPTIMIZED RLS POLICIES
--- Using helper function for better performance
+-- Drop ALL possible policy names first for idempotency
 -- =====================================================
 
 -- Helper function to get branch ID from header with caching
@@ -54,22 +55,21 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql STABLE;
 
--- BRANCHES - SELECT: Only branches for this business
+-- BRANCHES policies
 DROP POLICY IF EXISTS "branches_select" ON branches;
+DROP POLICY IF EXISTS "branches_insert" ON branches;
 CREATE POLICY "branches_select" ON branches
     FOR SELECT USING (
         business_id::text = (SELECT get_tenant_id())
     );
-
--- BRANCHES - INSERT: Allow creating branches for this business
-DROP POLICY IF EXISTS "branches_insert" ON branches;
 CREATE POLICY "branches_insert" ON branches
     FOR INSERT WITH CHECK (
         business_id::text = (SELECT get_tenant_id())
     );
 
--- PRODUCTS - Update policy to check branch_id when set
+-- PRODUCTS policies (drop old and new names)
 DROP POLICY IF EXISTS "products_all" ON products;
+DROP POLICY IF EXISTS "products_branch_isolation" ON products;
 CREATE POLICY "products_branch_isolation" ON products
     FOR ALL USING (
         business_id::text = (SELECT get_tenant_id())
@@ -81,8 +81,9 @@ CREATE POLICY "products_branch_isolation" ON products
     )
     WITH CHECK (true);
 
--- TRANSACTIONS - Branch-level isolation
+-- TRANSACTIONS policies (drop old and new names)
 DROP POLICY IF EXISTS "transactions_all" ON transactions;
+DROP POLICY IF EXISTS "transactions_branch_isolation" ON transactions;
 CREATE POLICY "transactions_branch_isolation" ON transactions
     FOR ALL USING (
         business_id::text = (SELECT get_tenant_id())
@@ -94,8 +95,9 @@ CREATE POLICY "transactions_branch_isolation" ON transactions
     )
     WITH CHECK (true);
 
--- STAFF - Branch-level isolation
+-- STAFF policies (drop old and new names)
 DROP POLICY IF EXISTS "staff_all" ON staff_members;
+DROP POLICY IF EXISTS "staff_branch_isolation" ON staff_members;
 CREATE POLICY "staff_branch_isolation" ON staff_members
     FOR ALL USING (
         business_id::text = (SELECT get_tenant_id())

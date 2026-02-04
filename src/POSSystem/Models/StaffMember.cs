@@ -96,8 +96,15 @@ public class StaffMember
     /// Link to business for multi-tenant sync.
     /// </summary>
     public Guid? BusinessId { get; set; }
+    
+    /// <summary>
+    /// Specific branch this staff member works at.
+    /// Null means staff can work at any branch.
+    /// </summary>
+    public Guid? BranchId { get; set; }
 
     #endregion
+
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

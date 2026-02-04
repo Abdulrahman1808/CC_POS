@@ -230,3 +230,44 @@ public class StringMatchConverter : IValueConverter
         return Binding.DoNothing;
     }
 }
+
+/// <summary>
+/// Converts null/empty string to Collapsed, non-null to Visible.
+/// Used for showing/hiding elements based on data presence.
+/// </summary>
+public class NullToCollapsedConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value == null)
+            return Visibility.Collapsed;
+        if (value is string str)
+            return string.IsNullOrWhiteSpace(str) ? Visibility.Collapsed : Visibility.Visible;
+        return Visibility.Visible;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Inverts boolean to Visibility (True = Collapsed, False = Visible).
+/// </summary>
+public class InverseBoolToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is bool b)
+            return b ? Visibility.Collapsed : Visibility.Visible;
+        return Visibility.Visible;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is Visibility v)
+            return v != Visibility.Visible;
+        return false;
+    }
+}
