@@ -1,0 +1,77 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio files
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build artifacts
+*.exe
+*.dll
+*.pdb
+*.cache
+*.ilk
+*.obj
+
+# NuGet Packages
+*.nupkg
+packages/
+!packages/repositories.config
+
+# Package directories
+node_modules/
+
+# Tests folder
+tests/
+
+# Rider
+.idea/
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Test Results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+TestResult.xml
+
+# NCrunch
+*.ncrunchproject
+*.ncrunchsolution
+_NCrunch_*
+
+# Publish output
+publish/
+
+# JetBrains Tools
+.idea/
+*.DotSettings.user
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
+# Backup files
+*~
+*.bak
+*.swp
+
+# OS generated files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local settings
+appsettings.Development.json
+secrets.json

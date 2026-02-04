@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="0" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms</value>
+  </resheader>
+  
+  <!-- Common - عام -->
+  <data name="AppTitle" xml:space="preserve">
+    <value>نظام نقاط البيع</value>
+  </data>
+  <data name="Loading" xml:space="preserve">
+    <value>جاري التحميل...</value>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>حفظ</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>إلغاء</value>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>حذف</value>
+  </data>
+  <data name="Edit" xml:space="preserve">
+    <value>تعديل</value>
+  </data>
+  <data name="Add" xml:space="preserve">
+    <value>إضافة</value>
+  </data>
+  <data name="Search" xml:space="preserve">
+    <value>بحث</value>
+  </data>
+  <data name="Yes" xml:space="preserve">
+    <value>نعم</value>
+  </data>
+  <data name="No" xml:space="preserve">
+    <value>لا</value>
+  </data>
+  <data name="OK" xml:space="preserve">
+    <value>موافق</value>
+  </data>
+  <data name="Error" xml:space="preserve">
+    <value>خطأ</value>
+  </data>
+  <data name="Success" xml:space="preserve">
+    <value>نجاح</value>
+  </data>
+  <data name="Warning" xml:space="preserve">
+    <value>تحذير</value>
+  </data>
+  
+  <!-- Dashboard - لوحة التحكم -->
+  <data name="Dashboard" xml:space="preserve">
+    <value>لوحة التحكم</value>
+  </data>
+  <data name="DailySales" xml:space="preserve">
+    <value>المبيعات اليومية</value>
+  </data>
+  <data name="TodayTransactions" xml:space="preserve">
+    <value>معاملات اليوم</value>
+  </data>
+  <data name="Products" xml:space="preserve">
+    <value>المنتجات</value>
+  </data>
+  <data name="Categories" xml:space="preserve">
+    <value>الأقسام</value>
+  </data>
+  <data name="AllCategories" xml:space="preserve">
+    <value>جميع الأقسام</value>
+  </data>
+  
+  <!-- Cart - سلة التسوق -->
+  <data name="Cart" xml:space="preserve">
+    <value>سلة التسوق</value>
+  </data>
+  <data name="EmptyCart" xml:space="preserve">
+    <value>السلة فارغة</value>
+  </data>
+  <data name="Subtotal" xml:space="preserve">
+    <value>المجموع الفرعي</value>
+  </data>
+  <data name="Tax" xml:space="preserve">
+    <value>الضريبة</value>
+  </data>
+  <data name="Total" xml:space="preserve">
+    <value>الإجمالي</value>
+  </data>
+  <data name="ClearCart" xml:space="preserve">
+    <value>إفراغ السلة</value>
+  </data>
+  <data name="Checkout" xml:space="preserve">
+    <value>الدفع</value>
+  </data>
+  
+  <!-- Payment - الدفع -->
+  <data name="Payment" xml:space="preserve">
+    <value>الدفع</value>
+  </data>
+  <data name="PaymentMethod" xml:space="preserve">
+    <value>طريقة الدفع</value>
+  </data>
+  <data name="Cash" xml:space="preserve">
+    <value>نقدي</value>
+  </data>
+  <data name="Card" xml:space="preserve">
+    <value>بطاقة</value>
+  </data>
+  <data name="Mobile" xml:space="preserve">
+    <value>موبايل</value>
+  </data>
+  <data name="AmountTendered" xml:space="preserve">
+    <value>المبلغ المدفوع</value>
+  </data>
+  <data name="Change" xml:space="preserve">
+    <value>الباقي</value>
+  </data>
+  <data name="ProcessPayment" xml:space="preserve">
+    <value>إتمام الدفع</value>
+  </data>
+  <data name="PaymentSuccess" xml:space="preserve">
+    <value>تم الدفع بنجاح</value>
+  </data>
+  <data name="PaymentFailed" xml:space="preserve">
+    <value>فشل الدفع</value>
+  </data>
+  
+  <!-- Inventory - المخزون -->
+  <data name="Inventory" xml:space="preserve">
+    <value>المخزون</value>
+  </data>
+  <data name="StockQuantity" xml:space="preserve">
+    <value>الكمية المتوفرة</value>
+  </data>
+  <data name="LowStock" xml:space="preserve">
+    <value>مخزون منخفض</value>
+  </data>
+  <data name="OutOfStock" xml:space="preserve">
+    <value>نفذ من المخزون</value>
+  </data>
+  <data name="AddProduct" xml:space="preserve">
+    <value>إضافة منتج</value>
+  </data>
+  
+  <!-- Reports - التقارير -->
+  <data name="Reports" xml:space="preserve">
+    <value>التقارير</value>
+  </data>
+  <data name="SalesReport" xml:space="preserve">
+    <value>تقرير المبيعات</value>
+  </data>
+  <data name="DateRange" xml:space="preserve">
+    <value>نطاق التاريخ</value>
+  </data>
+  <data name="Today" xml:space="preserve">
+    <value>اليوم</value>
+  </data>
+  <data name="ThisWeek" xml:space="preserve">
+    <value>هذا الأسبوع</value>
+  </data>
+  <data name="ThisMonth" xml:space="preserve">
+    <value>هذا الشهر</value>
+  </data>
+  <data name="Export" xml:space="preserve">
+    <value>تصدير</value>
+  </data>
+  
+  <!-- Settings - الإعدادات -->
+  <data name="Settings" xml:space="preserve">
+    <value>الإعدادات</value>
+  </data>
+  <data name="StoreSettings" xml:space="preserve">
+    <value>إعدادات المتجر</value>
+  </data>
+  <data name="StoreName" xml:space="preserve">
+    <value>اسم المتجر</value>
+  </data>
+  <data name="StoreAddress" xml:space="preserve">
+    <value>عنوان المتجر</value>
+  </data>
+  <data name="TaxNumber" xml:space="preserve">
+    <value>رقم التسجيل الضريبي</value>
+  </data>
+  <data name="PrinterSettings" xml:space="preserve">
+    <value>إعدادات الطابعة</value>
+  </data>
+  <data name="Language" xml:space="preserve">
+    <value>اللغة</value>
+  </data>
+  
+  <!-- License - الترخيص -->
+  <data name="License" xml:space="preserve">
+    <value>الترخيص</value>
+  </data>
+  <data name="LicenseKey" xml:space="preserve">
+    <value>مفتاح الترخيص</value>
+  </data>
+  <data name="Activate" xml:space="preserve">
+    <value>تفعيل</value>
+  </data>
+  <data name="LicenseValid" xml:space="preserve">
+    <value>الترخيص صالح</value>
+  </data>
+  <data name="LicenseInvalid" xml:space="preserve">
+    <value>ترخيص غير صالح</value>
+  </data>
+  <data name="DeveloperMode" xml:space="preserve">
+    <value>وضع المطور</value>
+  </data>
+  
+  <!-- Developer Overlay - شريط المطور -->
+  <data name="HealthCheck" xml:space="preserve">
+    <value>فحص النظام</value>
+  </data>
+  <data name="ForceSync" xml:space="preserve">
+    <value>مزامنة فورية</value>
+  </data>
+  <data name="ClearTestData" xml:space="preserve">
+    <value>مسح بيانات الاختبار</value>
+  </data>
+  <data name="TestInvoice" xml:space="preserve">
+    <value>فاتورة تجريبية</value>
+  </data>
+</root>

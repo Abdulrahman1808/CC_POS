@@ -1,0 +1,27 @@
+﻿<Application x:Class="POSSystem.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:POSSystem.Converters"
+             Startup="Application_Startup"
+             DispatcherUnhandledException="Application_DispatcherUnhandledException"
+             ShutdownMode="OnExplicitShutdown">
+    <Application.Resources>
+        <ResourceDictionary>
+            <!-- Converters -->
+            <converters:BoolToSyncColorConverter x:Key="BoolToSyncColor"/>
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisibility"/>
+            <converters:BoolToOnlineTextConverter x:Key="BoolToOnlineText"/>
+            <converters:CurrencyConverter x:Key="Currency"/>
+            <converters:InverseBoolConverter x:Key="InverseBool"/>
+            <converters:TaxConverter x:Key="TaxConverter"/>
+            <converters:TotalWithTaxConverter x:Key="TotalConverter"/>
+            <converters:ZeroToVisibilityConverter x:Key="ZeroToVisibility"/>
+            <converters:IntToVisibilityPositiveConverter x:Key="IntToVisibilityPositive"/>
+            <converters:IntToVisibilityConverter x:Key="IntToVisibility"/>
+            <converters:PositiveToVisibilityConverter x:Key="PositiveToVisibility"/>
+            <converters:StringMatchConverter x:Key="StringMatchConverter"/>
+            <converters:InitialsConverter x:Key="InitialsConverter"/>
+            <converters:PinDotConverter x:Key="PinDotConverter"/>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
