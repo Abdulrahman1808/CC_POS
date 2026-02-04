@@ -237,16 +237,28 @@ public partial class InventoryViewModel : ObservableObject
             var skipped = 0;
             var lines = await File.ReadAllLinesAsync(dialog.FileName);
 
-            // Skip header row if exists
-            var startIndex = lines.Length > 0 && lines[0].ToLower().Contains("name") ? 1 : 0;
+            if (lines.Length < 2)
+            {
+                MessageBox.Show("CSV file is empty or has no data rows.", "Import Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
 
-            for (int i = startIndex; i < lines.Length; i++)
+            // Parse header row to detect column positions
+            var headerFields = ParseCsvFields(lines[0]);
+            var columnMap = DetectCsvColumnMapping(headerFields);
+
+            Debug.WriteLine($"[CSV Import] Detected columns: {string.Join(", ", columnMap.Keys)}");
+
+            // Parse data rows starting from index 1
+            for (int i = 1; i < lines.Length; i++)
             {
                 var line = lines[i];
                 if (string.IsNullOrWhiteSpace(line)) continue;
 
-                var product = ParseCsvLine(line);
-                if (product != null)
+                var fields = ParseCsvFields(line);
+                var product = ParseCsvRow(fields, columnMap);
+                
+                if (product != null && !string.IsNullOrWhiteSpace(product.Name))
                 {
                     await _dataService.AddProductAsync(product);
                     imported++;
@@ -254,6 +266,7 @@ public partial class InventoryViewModel : ObservableObject
                 else
                 {
                     skipped++;
+                    Debug.WriteLine($"[CSV Import] Skipped row {i}: {line}");
                 }
             }
 
@@ -273,6 +286,138 @@ public partial class InventoryViewModel : ObservableObject
             IsLoading = false;
         }
     }
+
+    /// <summary>
+    /// Detect column mapping from CSV header row
+    /// </summary>
+    private Dictionary<string, int> DetectCsvColumnMapping(List<string> headers)
+    {
+        var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        
+        for (int i = 0; i < headers.Count; i++)
+        {
+            var header = headers[i].Trim().ToLower();
+            
+            // Name mappings
+            if (header.Contains("name") || header.Contains("اسم") || header.Contains("الاسم"))
+                map["Name"] = i;
+            // Category mappings
+            else if (header.Contains("category") || header.Contains("فئة") || header.Contains("الفئة"))
+                map["Category"] = i;
+            // Quantity/Stock mappings
+            else if (header == "quantity" || header.Contains("كمية") || header.Contains("الكمية"))
+                map["Quantity"] = i;
+            // Retail quantity
+            else if (header.Contains("retail_quantity") || header.Contains("retail quantity") || header.Contains("كمية القطاعى"))
+                map["RetailQuantity"] = i;
+            // Location
+            else if (header.Contains("location") || header.Contains("موقع") || header.Contains("الموقع") || header.Contains("store"))
+                map["Location"] = i;
+            // Barcode
+            else if (header.Contains("barcode") || header.Contains("باركود"))
+                map["Barcode"] = i;
+            // Type
+            else if (header.Contains("type") || header.Contains("نوع") || header.Contains("النوع"))
+                map["Type"] = i;
+            // Weight
+            else if (header.Contains("weight") || header.Contains("وزن") || header.Contains("الوزن"))
+                map["Weight"] = i;
+            // Carton count
+            else if (header.Contains("carton_count") || header.Contains("carton count") || header.Contains("كراتين"))
+                map["CartonCount"] = i;
+            // Units per carton
+            else if (header.Contains("units_per_carton") || header.Contains("units per carton") || header.Contains("وحدات"))
+                map["UnitsPerCarton"] = i;
+            // Flavor
+            else if (header.Contains("flavor") || header.Contains("نكهة") || header.Contains("النكهة"))
+                map["Flavor"] = i;
+            // Supplier price (wholesale)
+            else if (header.Contains("supplier_price") || header.Contains("supplier price") || header.Contains("wholesale_supplier") || header.Contains("سعر المورد"))
+                map["SupplierPrice"] = i;
+            // Wholesale sale price
+            else if (header.Contains("wholesale_sale") || header.Contains("wholesale sale") || header.Contains("سعر الجملة"))
+                map["WholesaleSalePrice"] = i;
+            // Retail sale price
+            else if (header.Contains("retail_sale") || header.Contains("retail sale") || header.Contains("سعر القطاعى") || header.Contains("retail_price") || header.Contains("price"))
+                map["RetailSalePrice"] = i;
+            // Extra retail quantity
+            else if (header.Contains("extra_retail") || header.Contains("extra retail"))
+                map["ExtraRetailQuantity"] = i;
+            // Min quantity
+            else if (header.Contains("min_quantity") || header.Contains("min quantity") || header.Contains("الحد الأدنى"))
+                map["MinQuantity"] = i;
+        }
+        
+        return map;
+    }
+
+    /// <summary>
+    /// Parse a CSV row into a Product using the column mapping
+    /// </summary>
+    private Product? ParseCsvRow(List<string> fields, Dictionary<string, int> columnMap)
+    {
+        try
+        {
+            string GetField(string key, string defaultVal = "")
+            {
+                if (columnMap.TryGetValue(key, out int idx) && idx < fields.Count)
+                    return fields[idx].Trim();
+                return defaultVal;
+            }
+
+            int GetIntField(string key, int defaultVal = 0)
+            {
+                var val = GetField(key);
+                return int.TryParse(val, out var result) ? result : defaultVal;
+            }
+
+            decimal GetDecimalField(string key, decimal defaultVal = 0m)
+            {
+                var val = GetField(key).Replace("$", "").Replace("E£", "").Replace("£", "").Trim();
+                return decimal.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out var result) ? result : defaultVal;
+            }
+
+            var name = GetField("Name");
+            if (string.IsNullOrWhiteSpace(name)) return null;
+
+            var retailPrice = GetDecimalField("RetailSalePrice");
+            var wholesalePrice = GetDecimalField("WholesaleSalePrice");
+            var supplierPrice = GetDecimalField("SupplierPrice");
+
+            return new Product
+            {
+                Id = Guid.NewGuid(),
+                Name = name,
+                Category = GetField("Category", "Uncategorized"),
+                StockQuantity = GetIntField("Quantity"),
+                RetailQuantity = GetIntField("RetailQuantity"),
+                Location = GetField("Location"),
+                Barcode = GetField("Barcode"),
+                ProductType = GetField("Type"),
+                Weight = GetField("Weight"),
+                CartonCount = GetIntField("CartonCount"),
+                UnitsPerCarton = GetIntField("UnitsPerCarton"),
+                Flavor = GetField("Flavor"),
+                WholesaleSupplierPrice = supplierPrice,
+                WholesaleSalePrice = wholesalePrice,
+                RetailSalePrice = retailPrice,
+                ExtraRetailQuantity = GetIntField("ExtraRetailQuantity"),
+                MinStockLevel = GetIntField("MinQuantity", 5),
+                // Set Price and Cost from the pricing fields
+                Price = retailPrice > 0 ? retailPrice : wholesalePrice,
+                Cost = supplierPrice,
+                TaxRate = 0.14m,
+                IsActive = true,
+                LastUpdatedBy = UpdateSource.Desktop
+            };
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[CSV Import] Parse error: {ex.Message}");
+            return null;
+        }
+    }
+
 
     [RelayCommand]
     private async Task ImportExcelAsync()

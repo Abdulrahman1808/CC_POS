@@ -218,7 +218,6 @@
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="65"/>
                 <DataGridTextColumn Header="Name / الاسم" Binding="{Binding Name}" Width="*" MinWidth="150"/>
                 <DataGridTextColumn Header="Category / الفئة" Binding="{Binding Category}" Width="120"/>
                 <DataGridTextColumn Header="Type / النوع" Binding="{Binding ProductType}" Width="100"/>
