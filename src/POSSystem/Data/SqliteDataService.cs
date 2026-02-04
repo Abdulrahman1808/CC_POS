@@ -243,6 +243,22 @@ public class SqliteDataService : IDataService
             .FirstOrDefaultAsync(t => t.TransactionNumber == transactionNumber);
     }
 
+    public async Task<bool> UpdateTransactionAsync(Transaction transaction)
+    {
+        try
+        {
+            using var context = _contextFactory.CreateDbContext();
+            context.Transactions.Update(transaction);
+            await context.SaveChangesAsync();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[SqliteDataService] UpdateTransaction ERROR: {ex.Message}");
+            return false;
+        }
+    }
+
     public async Task<bool> CreateTransactionAsync(Transaction transaction)
     {
         try

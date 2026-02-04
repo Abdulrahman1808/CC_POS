@@ -184,6 +184,15 @@ public class ThermalReceiptService : IThermalReceiptService, IDisposable
         
         Write(e.PrintLine(new string('-', CharsPerLine)));
         
+        // ========== BARCODE (Code128) ==========
+        if (!string.IsNullOrEmpty(receipt.BarcodeValue))
+        {
+            Write(e.PrintLine(""));
+            Write(e.CenterAlign());
+            Write(GenerateBarcodeBytes(receipt.BarcodeValue));
+            Write(e.PrintLine(receipt.BarcodeValue)); // Print human readable text below
+        }
+
         // ========== ETA QR CODE ==========
         Write(e.CenterAlign());
         
@@ -211,6 +220,36 @@ public class ThermalReceiptService : IThermalReceiptService, IDisposable
         return ms.ToArray();
     }
     
+    /// <summary>
+    /// Generates ESC/POS Barcode commands (Code128).
+    /// </summary>
+    private byte[] GenerateBarcodeBytes(string data)
+    {
+        using var ms = new MemoryStream();
+        var dataBytes = Encoding.UTF8.GetBytes(data);
+        
+        // GS k (print barcode) - Function 73 (Code128)
+        // Format: GS k 73 n d1...dn
+        // n = length of data
+        
+        // Set barcode height (GS h) - default 162
+        ms.Write(new byte[] { 0x1D, 0x68, 80 }, 0, 3);
+        
+        // Set barcode width (GS w) - default 3 (2-6)
+        ms.Write(new byte[] { 0x1D, 0x77, 2 }, 0, 3);
+        
+        // Set HRI position (Human Readable Interpretation) - 0: None, 2: Below
+        ms.Write(new byte[] { 0x1D, 0x48, 0 }, 0, 3); // We print text manually for better control
+        
+        // Print Barcode (Function B - k m n d1...dk)
+        // m = 73 (Code128)
+        ms.Write(new byte[] { 0x1D, 0x6B, 73 }, 0, 3);
+        ms.WriteByte((byte)dataBytes.Length);
+        ms.Write(dataBytes, 0, dataBytes.Length);
+        
+        return ms.ToArray();
+    }
+
     /// <summary>
     /// Generates ESC/POS QR code commands using QR_Model2 for optimal density.
     /// </summary>
@@ -276,6 +315,9 @@ public class ThermalReceiptService : IThermalReceiptService, IDisposable
         if (!string.IsNullOrEmpty(receipt.PaymentReference))
             sb.AppendLine($"║  Ref: {receipt.PaymentReference,-39}  ║");
         
+        sb.AppendLine("╠════════════════════════════════════════════════╣");
+        sb.AppendLine($"║  {CenterString("[BARCODE]", 44)}  ║");
+        sb.AppendLine($"║  {CenterString(receipt.BarcodeValue, 44)}  ║");
         sb.AppendLine("╠════════════════════════════════════════════════╣");
         sb.AppendLine($"║  {CenterString("[QR CODE]", 44)}  ║");
         sb.AppendLine($"║  {CenterString($"TLV: {receipt.EtaTlvBase64.Substring(0, Math.Min(30, receipt.EtaTlvBase64.Length))}...", 44)}  ║");

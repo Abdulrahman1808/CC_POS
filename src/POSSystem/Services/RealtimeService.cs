@@ -34,6 +34,11 @@ public class RealtimeService : IDisposable
     /// </summary>
     public event EventHandler<bool>? ConnectionStatusChanged;
 
+    /// <summary>
+    /// Gets the current connection status.
+    /// </summary>
+    public bool IsConnected => _isConnected;
+
     public RealtimeService(IConfiguration configuration)
     {
         _configuration = configuration;

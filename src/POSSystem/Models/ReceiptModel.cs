@@ -76,6 +76,11 @@ public class ReceiptModel
     /// Unique transaction/receipt number.
     /// </summary>
     public string TransactionNumber { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Value for the Code128 barcode (usually same as TransactionNumber).
+    /// </summary>
+    public string BarcodeValue { get; set; } = string.Empty;
     
     /// <summary>
     /// Transaction timestamp.

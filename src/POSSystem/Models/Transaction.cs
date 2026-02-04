@@ -5,6 +5,16 @@ using System.ComponentModel.DataAnnotations;
 namespace POSSystem.Models;
 
 /// <summary>
+/// Status of the transaction.
+/// </summary>
+public enum TransactionStatus
+{
+    Completed,
+    Refunded,
+    Cancelled
+}
+
+/// <summary>
 /// Represents a sales transaction in the POS system.
 /// </summary>
 public class Transaction
@@ -28,6 +38,11 @@ public class Transaction
     
     [MaxLength(50)]
     public string PaymentMethod { get; set; } = "Cash";
+    
+    /// <summary>
+    /// Status of the transaction (Completed, Refunded, Cancelled).
+    /// </summary>
+    public TransactionStatus Status { get; set; } = TransactionStatus.Completed;
     
     /// <summary>
     /// Fawry reference number or card authorization code.

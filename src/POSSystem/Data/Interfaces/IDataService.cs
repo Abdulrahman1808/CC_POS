@@ -78,6 +78,11 @@ public interface IDataService
     Task<Transaction?> GetTransactionByNumberAsync(string transactionNumber);
 
     /// <summary>
+    /// Updates an existing transaction.
+    /// </summary>
+    Task<bool> UpdateTransactionAsync(Transaction transaction);
+
+    /// <summary>
     /// Creates a new transaction.
     /// </summary>
     Task<bool> CreateTransactionAsync(Transaction transaction);
