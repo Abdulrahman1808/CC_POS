@@ -256,34 +256,137 @@ public partial class InventoryViewModel : ObservableObject
 
             if (dialog.ShowDialog() != true) return;
 
-            // For Excel files, convert to CSV first using minimal parsing
-            // Note: Full Excel support requires EPPlus or ClosedXML NuGet package
             var extension = Path.GetExtension(dialog.FileName).ToLower();
             
             if (extension == ".csv")
             {
-                // Redirect to CSV import
                 await ImportCsvAsync();
                 return;
             }
+
+            IsLoading = true;
+            var imported = 0;
+            var skipped = 0;
+
+            await Task.Run(async () =>
+            {
+                using var workbook = new ClosedXML.Excel.XLWorkbook(dialog.FileName);
+                var worksheet = workbook.Worksheets.First();
+                var rows = worksheet.RangeUsed()?.RowsUsed().ToList();
+                
+                if (rows == null || rows.Count == 0)
+                {
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                        MessageBox.Show("Excel file is empty.", "Import Error", MessageBoxButton.OK, MessageBoxImage.Warning));
+                    return;
+                }
+
+                // Try to detect column mappings from header row
+                var columnMap = DetectColumnMapping(rows[0]);
+                var startRow = columnMap.Any() ? 1 : 0; // Skip header if detected
+
+                for (int i = startRow; i < rows.Count; i++)
+                {
+                    var row = rows[i];
+                    var product = ParseExcelRow(row, columnMap);
+                    
+                    if (product != null)
+                    {
+                        await Application.Current.Dispatcher.InvokeAsync(async () =>
+                        {
+                            await _dataService.AddProductAsync(product);
+                        });
+                        imported++;
+                    }
+                    else
+                    {
+                        skipped++;
+                    }
+                }
+            });
+
+            await LoadProductsAsync();
+            await LoadCategoriesAsync();
             
-            // Basic Excel import message for now
-            MessageBox.Show(
-                "For Excel (.xlsx/.xls) files, please save them as CSV first:\n\n" +
-                "1. Open your Excel file\n" +
-                "2. File → Save As\n" +
-                "3. Choose 'CSV (Comma delimited) (*.csv)'\n" +
-                "4. Use the 'Import CSV' button\n\n" +
-                "Expected CSV columns:\n" +
-                "Name, Price, Cost, Category, SKU, Barcode, Stock, TaxRate",
+            MessageBox.Show($"Excel Import Complete!\n\nImported: {imported} products\nSkipped: {skipped} rows", 
                 "Excel Import", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"[Import] Excel Error: {ex.Message}");
-            MessageBox.Show($"Error: {ex.Message}", "Import Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"Error importing Excel:\n{ex.Message}", "Import Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsLoading = false;
         }
     }
+
+    private Dictionary<string, int> DetectColumnMapping(ClosedXML.Excel.IXLRangeRow headerRow)
+    {
+        var map = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var cells = headerRow.CellsUsed().ToList();
+        
+        for (int i = 0; i < cells.Count; i++)
+        {
+            var header = cells[i].GetString().Trim().ToLower();
+            var colIndex = cells[i].Address.ColumnNumber;
+            
+            if (header.Contains("name") || header.Contains("product") || header.Contains("اسم"))
+                map["Name"] = colIndex;
+            else if (header.Contains("price") || header.Contains("سعر"))
+                map["Price"] = colIndex;
+            else if (header.Contains("cost") || header.Contains("تكلفة"))
+                map["Cost"] = colIndex;
+            else if (header.Contains("category") || header.Contains("فئة") || header.Contains("cat"))
+                map["Category"] = colIndex;
+            else if (header.Contains("sku") || header.Contains("code"))
+                map["SKU"] = colIndex;
+            else if (header.Contains("barcode") || header.Contains("bar"))
+                map["Barcode"] = colIndex;
+            else if (header.Contains("stock") || header.Contains("qty") || header.Contains("quantity") || header.Contains("كمية"))
+                map["Stock"] = colIndex;
+            else if (header.Contains("tax") || header.Contains("ضريبة"))
+                map["TaxRate"] = colIndex;
+        }
+
+        return map;
+    }
+
+    private Product? ParseExcelRow(ClosedXML.Excel.IXLRangeRow row, Dictionary<string, int> columnMap)
+    {
+        try
+        {
+            string GetCellValue(string key, int defaultCol)
+            {
+                var col = columnMap.TryGetValue(key, out var c) ? c : defaultCol;
+                return row.Cell(col).GetString().Trim();
+            }
+
+            var name = GetCellValue("Name", 1);
+            if (string.IsNullOrWhiteSpace(name)) return null;
+
+            return new Product
+            {
+                Id = Guid.NewGuid(),
+                Name = name,
+                Price = ParseDecimal(GetCellValue("Price", 2)),
+                Cost = ParseDecimal(GetCellValue("Cost", 3)),
+                Category = GetCellValue("Category", 4).Length > 0 ? GetCellValue("Category", 4) : "Uncategorized",
+                Sku = GetCellValue("SKU", 5),
+                Barcode = GetCellValue("Barcode", 6),
+                StockQuantity = ParseInt(GetCellValue("Stock", 7)),
+                TaxRate = ParseDecimal(GetCellValue("TaxRate", 8)) > 0 ? ParseDecimal(GetCellValue("TaxRate", 8)) : 0.14m,
+                IsActive = true
+            };
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Import] Excel row parse error: {ex.Message}");
+            return null;
+        }
+    }
+
 
     private Product? ParseCsvLine(string line)
     {
