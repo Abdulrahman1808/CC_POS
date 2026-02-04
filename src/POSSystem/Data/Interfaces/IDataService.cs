@@ -160,6 +160,35 @@ public interface IDataService
     /// </summary>
     Task<bool> DeactivateStaffMemberAsync(Guid id);
 
+    /// <summary>
+    /// Gets all staff members (active and inactive).
+    /// </summary>
+    Task<IEnumerable<StaffMember>> GetStaffMembersAsync();
+
+    #endregion
+
+    #region Activity Log
+
+    /// <summary>
+    /// Adds an activity log entry.
+    /// </summary>
+    Task<bool> AddActivityLogAsync(ActivityLog log);
+
+    /// <summary>
+    /// Gets activity logs within a date range.
+    /// </summary>
+    Task<IEnumerable<ActivityLog>> GetActivityLogsAsync(DateTime? from = null, DateTime? to = null);
+
+    /// <summary>
+    /// Gets unsynced activity logs for cloud sync.
+    /// </summary>
+    Task<IEnumerable<ActivityLog>> GetUnsyncedActivityLogsAsync();
+
+    /// <summary>
+    /// Marks activity logs as synced.
+    /// </summary>
+    Task<bool> MarkActivityLogsSyncedAsync(IEnumerable<Guid> ids);
+
     #endregion
 
     #region Database Management

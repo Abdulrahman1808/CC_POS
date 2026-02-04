@@ -19,6 +19,8 @@ public class TenantContext : ITenantContext
     private Guid? _currentBusinessId;
     private Guid? _currentBranchId;
     private string? _currentBranchName;
+    private Guid? _currentStaffId;
+    private string? _currentStaffName;
     
     public TenantContext()
     {
@@ -41,10 +43,19 @@ public class TenantContext : ITenantContext
     public string? CurrentBranchName => _currentBranchName;
     
     /// <inheritdoc />
+    public Guid? CurrentStaffId => _currentStaffId;
+    
+    /// <inheritdoc />
+    public string? CurrentStaffName => _currentStaffName;
+    
+    /// <inheritdoc />
     public bool IsContextValid => _currentBusinessId.HasValue && _currentBusinessId != Guid.Empty;
     
     /// <inheritdoc />
     public bool IsBranchSelected => _currentBranchId.HasValue && _currentBranchId != Guid.Empty;
+    
+    /// <inheritdoc />
+    public bool IsStaffLoggedIn => _currentStaffId.HasValue && _currentStaffId != Guid.Empty;
     
     /// <inheritdoc />
     public bool IsFullyConfigured => IsContextValid && IsBranchSelected;
@@ -107,6 +118,31 @@ public class TenantContext : ITenantContext
         PersistContext();
         
         Debug.WriteLine("[TenantContext] Branch context cleared (business retained)");
+    }
+    
+    /// <inheritdoc />
+    public void SetStaffContext(Guid staffId, string staffName)
+    {
+        if (staffId == Guid.Empty)
+            throw new ArgumentException("StaffId cannot be empty", nameof(staffId));
+        
+        if (string.IsNullOrWhiteSpace(staffName))
+            throw new ArgumentException("StaffName cannot be empty", nameof(staffName));
+        
+        _currentStaffId = staffId;
+        _currentStaffName = staffName;
+        
+        // Note: Staff context is session-only, not persisted for security
+        Debug.WriteLine($"[TenantContext] Staff logged in: {staffName} ({staffId})");
+    }
+    
+    /// <inheritdoc />
+    public void ClearStaffContext()
+    {
+        _currentStaffId = null;
+        _currentStaffName = null;
+        
+        Debug.WriteLine("[TenantContext] Staff logged out");
     }
     
     /// <inheritdoc />

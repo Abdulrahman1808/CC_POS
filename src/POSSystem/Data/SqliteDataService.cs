@@ -617,4 +617,91 @@ public class SqliteDataService : IDataService
     }
 
     #endregion
+
+    #region Activity Log
+
+    public async Task<bool> AddActivityLogAsync(ActivityLog log)
+    {
+        try
+        {
+            using var context = _contextFactory.CreateDbContext();
+            
+            // Auto-populate tenant context
+            log.BusinessId ??= _tenantContext.CurrentBusinessId;
+            log.BranchId ??= _tenantContext.CurrentBranchId;
+            log.StaffId ??= _tenantContext.CurrentStaffId;
+            log.StaffName ??= _tenantContext.CurrentStaffName;
+            
+            await context.ActivityLogs.AddAsync(log);
+            await context.SaveChangesAsync();
+            
+            Debug.WriteLine($"[SqliteDataService] ActivityLog added: {log.Action} - {log.EntityType}");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[SqliteDataService] AddActivityLog ERROR: {ex.Message}");
+            return false;
+        }
+    }
+
+    public async Task<IEnumerable<ActivityLog>> GetActivityLogsAsync(DateTime? from = null, DateTime? to = null)
+    {
+        using var context = _contextFactory.CreateDbContext();
+        var query = context.ActivityLogs.AsQueryable();
+
+        if (from.HasValue)
+            query = query.Where(l => l.Timestamp >= from.Value);
+        if (to.HasValue)
+            query = query.Where(l => l.Timestamp <= to.Value);
+
+        return await query
+            .OrderByDescending(l => l.Timestamp)
+            .Take(1000)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<ActivityLog>> GetUnsyncedActivityLogsAsync()
+    {
+        using var context = _contextFactory.CreateDbContext();
+        return await context.ActivityLogs
+            .Where(l => !l.IsSynced)
+            .OrderBy(l => l.Timestamp)
+            .Take(100)
+            .ToListAsync();
+    }
+
+    public async Task<bool> MarkActivityLogsSyncedAsync(IEnumerable<Guid> ids)
+    {
+        try
+        {
+            using var context = _contextFactory.CreateDbContext();
+            var logs = await context.ActivityLogs
+                .Where(l => ids.Contains(l.Id))
+                .ToListAsync();
+
+            foreach (var log in logs)
+            {
+                log.IsSynced = true;
+            }
+
+            await context.SaveChangesAsync();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[SqliteDataService] MarkActivityLogsSynced ERROR: {ex.Message}");
+            return false;
+        }
+    }
+
+    public async Task<IEnumerable<StaffMember>> GetStaffMembersAsync()
+    {
+        using var context = _contextFactory.CreateDbContext();
+        return await context.StaffMembers
+            .OrderBy(s => s.Name)
+            .ToListAsync();
+    }
+
+    #endregion
 }
