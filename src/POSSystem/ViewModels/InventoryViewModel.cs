@@ -332,20 +332,54 @@ public partial class InventoryViewModel : ObservableObject
             var header = cells[i].GetString().Trim().ToLower();
             var colIndex = cells[i].Address.ColumnNumber;
             
-            if (header.Contains("name") || header.Contains("product") || header.Contains("اسم"))
+            // Core fields
+            if (header == "id")
+                map["Id"] = colIndex;
+            else if (header == "name" || header.Contains("اسم"))
                 map["Name"] = colIndex;
+            else if (header == "category" || header.Contains("فئة"))
+                map["Category"] = colIndex;
+            else if (header == "quantity" || header == "qty")
+                map["Quantity"] = colIndex;
+            else if (header == "retail_quantity" || header.Contains("retail_qty"))
+                map["RetailQuantity"] = colIndex;
+            else if (header == "location" || header.Contains("موقع"))
+                map["Location"] = colIndex;
+            else if (header == "barcode" || header.Contains("باركود"))
+                map["Barcode"] = colIndex;
+            else if (header == "type" || header == "product_type")
+                map["ProductType"] = colIndex;
+            else if (header == "weight" || header.Contains("وزن"))
+                map["Weight"] = colIndex;
+            else if (header == "carton_count" || header.Contains("carton"))
+                map["CartonCount"] = colIndex;
+            else if (header == "units_per_carton" || header.Contains("units_per"))
+                map["UnitsPerCarton"] = colIndex;
+            else if (header == "flavor" || header.Contains("نكهة"))
+                map["Flavor"] = colIndex;
+            else if (header == "carton_fraction")
+                map["CartonFraction"] = colIndex;
+            else if (header == "unit_type")
+                map["UnitType"] = colIndex;
+            else if (header == "wholesale_supplier_price" || header.Contains("supplier"))
+                map["WholesaleSupplierPrice"] = colIndex;
+            else if (header == "wholesale_sale_price" || header.Contains("wholesale_sale"))
+                map["WholesaleSalePrice"] = colIndex;
+            else if (header == "retail_sale_price" || header.Contains("retail_sale"))
+                map["RetailSalePrice"] = colIndex;
+            else if (header == "extra_retail_quantity")
+                map["ExtraRetailQuantity"] = colIndex;
+            else if (header == "min_quantity" || header.Contains("min_stock"))
+                map["MinQuantity"] = colIndex;
+            else if (header == "image" || header.Contains("صورة"))
+                map["ImagePath"] = colIndex;
+            // Fallback for price/cost/sku/tax
             else if (header.Contains("price") || header.Contains("سعر"))
                 map["Price"] = colIndex;
             else if (header.Contains("cost") || header.Contains("تكلفة"))
                 map["Cost"] = colIndex;
-            else if (header.Contains("category") || header.Contains("فئة") || header.Contains("cat"))
-                map["Category"] = colIndex;
             else if (header.Contains("sku") || header.Contains("code"))
                 map["SKU"] = colIndex;
-            else if (header.Contains("barcode") || header.Contains("bar"))
-                map["Barcode"] = colIndex;
-            else if (header.Contains("stock") || header.Contains("qty") || header.Contains("quantity") || header.Contains("كمية"))
-                map["Stock"] = colIndex;
             else if (header.Contains("tax") || header.Contains("ضريبة"))
                 map["TaxRate"] = colIndex;
         }
@@ -353,30 +387,50 @@ public partial class InventoryViewModel : ObservableObject
         return map;
     }
 
+
     private Product? ParseExcelRow(ClosedXML.Excel.IXLRangeRow row, Dictionary<string, int> columnMap)
     {
         try
         {
-            string GetCellValue(string key, int defaultCol)
+            string GetCellValue(string key, int defaultCol = 0)
             {
+                if (defaultCol == 0 && !columnMap.ContainsKey(key)) return "";
                 var col = columnMap.TryGetValue(key, out var c) ? c : defaultCol;
+                if (col == 0) return "";
                 return row.Cell(col).GetString().Trim();
             }
 
-            var name = GetCellValue("Name", 1);
+            var name = GetCellValue("Name", 2); // Column 2 is 'name' in CSV
             if (string.IsNullOrWhiteSpace(name)) return null;
 
             return new Product
             {
                 Id = Guid.NewGuid(),
                 Name = name,
-                Price = ParseDecimal(GetCellValue("Price", 2)),
-                Cost = ParseDecimal(GetCellValue("Cost", 3)),
-                Category = GetCellValue("Category", 4).Length > 0 ? GetCellValue("Category", 4) : "Uncategorized",
-                Sku = GetCellValue("SKU", 5),
-                Barcode = GetCellValue("Barcode", 6),
-                StockQuantity = ParseInt(GetCellValue("Stock", 7)),
-                TaxRate = ParseDecimal(GetCellValue("TaxRate", 8)) > 0 ? ParseDecimal(GetCellValue("TaxRate", 8)) : 0.14m,
+                Category = GetCellValue("Category").Length > 0 ? GetCellValue("Category") : "Uncategorized",
+                StockQuantity = ParseInt(GetCellValue("Quantity")),
+                RetailQuantity = ParseInt(GetCellValue("RetailQuantity")),
+                Location = GetCellValue("Location"),
+                Barcode = GetCellValue("Barcode"),
+                ProductType = GetCellValue("ProductType"),
+                Weight = GetCellValue("Weight"),
+                CartonCount = ParseInt(GetCellValue("CartonCount")),
+                UnitsPerCarton = ParseInt(GetCellValue("UnitsPerCarton")),
+                Flavor = GetCellValue("Flavor"),
+                CartonFraction = ParseDecimal(GetCellValue("CartonFraction")),
+                UnitType = GetCellValue("UnitType"),
+                WholesaleSupplierPrice = ParseDecimal(GetCellValue("WholesaleSupplierPrice")),
+                WholesaleSalePrice = ParseDecimal(GetCellValue("WholesaleSalePrice")),
+                RetailSalePrice = ParseDecimal(GetCellValue("RetailSalePrice")),
+                ExtraRetailQuantity = ParseInt(GetCellValue("ExtraRetailQuantity")),
+                MinStockLevel = ParseInt(GetCellValue("MinQuantity")),
+                ImagePath = GetCellValue("ImagePath"),
+                // Use RetailSalePrice as default Price if available, else WholesaleSalePrice
+                Price = ParseDecimal(GetCellValue("RetailSalePrice")) > 0 
+                    ? ParseDecimal(GetCellValue("RetailSalePrice")) 
+                    : ParseDecimal(GetCellValue("WholesaleSalePrice")),
+                Cost = ParseDecimal(GetCellValue("WholesaleSupplierPrice")),
+                TaxRate = 0.14m,
                 IsActive = true
             };
         }
@@ -386,6 +440,7 @@ public partial class InventoryViewModel : ObservableObject
             return null;
         }
     }
+
 
 
     private Product? ParseCsvLine(string line)
